@@ -1,0 +1,27 @@
+# Runtime
+MestreDoPC-Launcher.pid
+install.log
+uninstall.log
+logs/
+
+# Node
+mcp-server/node_modules/
+npm-debug.log*
+
+# Auditoria (gerada, nao versionada)
+audit/
+.playwright-mcp/
+
+# OS
+Thumbs.db
+desktop.ini
+*.bak
+
+# Editor
+.vscode/
+.idea/
+.claude/
+settings.local.json
+
+# Worktrees internos do Claude Code (outros repos)
+.claude/worktrees/

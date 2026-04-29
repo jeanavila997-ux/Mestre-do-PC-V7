@@ -1,0 +1,17 @@
+{
+  "name": "mestre-do-pc-mcp-v8",
+  "version": "8.0.0",
+  "type": "module",
+  "description": "Servidor MCP do Mestre do PC V8 — Comunicacao segura com o Launcher HTTP via stdio.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["mcp", "mestre-do-pc", "system-tools"],
+  "author": "Jeanc",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1"
+  }
+}
