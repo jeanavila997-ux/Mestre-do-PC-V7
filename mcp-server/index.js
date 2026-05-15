@@ -822,9 +822,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       for (const [key, value] of Object.entries(args)) {
 
+        // Allowlist: apenas caracteres válidos para nomes de processo/serviço Windows.
+        // Bloqueia $(), backtick, ;, |, &, {}, [] e qualquer outro metacaractere PS.
+        const sanitizedValue = String(value).replace(/[^a-zA-Z0-9\-_. ]/g, "");
+
+        if (sanitizedValue.trim().length === 0) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: `Argumento inválido para o parâmetro: ${key}` }],
+          };
+        }
+
         const placeholder = new RegExp(`\\{\\{${key.toUpperCase()}\\}\\}`, "g");
 
-        finalCmd = finalCmd.replace(placeholder, String(value).replace(/[`"']/g, "")); // sanitize básico
+        finalCmd = finalCmd.replace(placeholder, sanitizedValue);
 
       }
 
