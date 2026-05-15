@@ -6,6 +6,7 @@ logs/
 
 # Node
 mcp-server/node_modules/
+v8-refatorado/mcp-server/node_modules/
 npm-debug.log*
 
 # Auditoria (gerada, nao versionada)
