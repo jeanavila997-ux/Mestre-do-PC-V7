@@ -114,6 +114,11 @@
 - [ ] Exemplo de `claude_desktop_config.json`
 - [ ] Testar integração real com Claude
 
+#### 5. Integração Multi-LLM (Nova Funcionalidade)
+- [ ] Implementar suporte a múltiplos provedores (OpenAI, Gemini, Anthropic, DeepSeek) na nuvem
+- [ ] Estender a ferramenta `perguntar_ia` para aceitar parâmetros `provider` e `model`
+- [ ] Garantir que chaves de API externas sejam opcionais (com fallback automático para Ollama local se inativas)
+
 ---
 
 ## 🧪 Como Testar Agora

@@ -77,17 +77,21 @@ Criar uma integração empresarial que permita:
 ## Entregável 1 — SSO + token validation
 
 - [ ] Criar módulo `src/auth/entra.ts` (config MSAL, authority, scopes).
-- [ ] Criar middleware `src/auth/validateToken.ts` para validar claims essenciais.
+- [ ] Criar middleware `src/auth/validateToken.ts` para validação condicional.
 - [ ] Variáveis de ambiente:
+  - `ENABLE_MICROSOFT_AUTH` (booleano, default: `false`)
   - `ENTRA_TENANT_ID`
   - `ENTRA_CLIENT_ID`
   - `ENTRA_CLIENT_SECRET` (se fluxo confidencial)
   - `ENTRA_REDIRECT_URI`
-- [ ] Política default: negar acesso sem token válido.
+- [ ] Política default: **Modo Standalone / Local-Only** por padrão. Se `ENABLE_MICROSOFT_AUTH` for `false` (ou não configurado), o acesso local é totalmente liberado sem necessidade de token.
+- [ ] Se `ENABLE_MICROSOFT_AUTH=true`, o middleware passa a negar acesso a requisições sem token corporativo válido.
 
-**Critério de aceite:** operador autenticado no tenant correto acessa apenas ferramentas permitidas.
+**Critério de aceite:** 
+1. Por padrão (out-of-the-box), o servidor MCP roda localmente sem qualquer dependência ou obrigatoriedade de conta Microsoft ou internet.
+2. Com a flag ativada, a autenticação passa a ser validada de forma estrita.
 
-## Entregável 2 — Autorização por grupos/roles
+## Entregável 2 — Autorização por grupos/roles (Opcional)
 
 - [ ] Definir matriz de permissão por ferramenta MCP.
 - [ ] Resolver associação Entra Group -> Role interna.
@@ -95,29 +99,32 @@ Criar uma integração empresarial que permita:
 
 **Critério de aceite:** usuário sem role admin não executa comandos críticos.
 
-## Entregável 3 — Cliente Microsoft Graph resiliente
+## Entregável 3 — Cliente Microsoft Graph resiliente (Opcional)
 
 - [ ] Criar `src/integrations/graph-client.ts` usando SDK oficial.
 - [ ] Implementar política de retry para 429 com `Retry-After`.
 - [ ] Telemetria de latência/erro por endpoint Graph.
+- [ ] Comportamento default: Desativado se variáveis do Graph não configuradas. Erros de conexão ou autenticação não impedem a execução de ferramentas locais (degradação graciosa).
 
-**Critério de aceite:** sem falhas por burst simples; retries auditáveis.
+**Critério de aceite:** sem falhas por burst simples; se desabilitado, ferramentas funcionam normalmente sem fazer chamadas externas.
 
-## Entregável 4 — Notificações Teams
+## Entregável 4 — Notificações Teams (Opcional)
 
 - [ ] Definir canal operacional (ex.: `#infra-alertas`).
 - [ ] Publicar alertas estruturados (tipo, host, jobId, severidade, timestamp UTC).
 - [ ] Limitar ruído com deduplicação e rate limit.
+- [ ] Comportamento default: Desativado se Webhook/Connector do Teams não fornecido. Falhas de entrega de alertas apenas geram logs de aviso (`logger.warn`) sem interromper a execução das tarefas.
 
-**Critério de aceite:** incidentes importantes chegam ao Teams em < 30s.
+**Critério de aceite:** incidentes chegam ao Teams se configurado; se não configurado ou offline, o app funciona sem erros visíveis ao usuário.
 
-## Entregável 5 — Webhooks e eventos
+## Entregável 5 — Webhooks e eventos (Opcional)
 
 - [ ] Endpoint seguro para receber notificações Graph.
 - [ ] Verificação de validade da subscription.
 - [ ] Job de renovação automática.
+- [ ] Comportamento default: Ignorado se não habilitado.
 
-**Critério de aceite:** renovação contínua sem perda de assinatura em janela de 30 dias.
+**Critério de aceite:** renovação contínua apenas se ativo; nenhuma falha se inativo.
 
 ## 6) Segurança e compliance (recomendação oficial aplicada)
 
