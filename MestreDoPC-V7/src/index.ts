@@ -12,7 +12,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { generateCorrelationId, logger } from './logger.js';
-import { getAvailableTools } from './security/whitelist.js';
+import { getAvailableTools, getToolSchema } from './security/whitelist.js';
 import { executeLauncherCommand } from './launcher-client.js';
 
 const SERVER_NAME = 'mestredopc-v7';
@@ -34,19 +34,44 @@ async function main() {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = getAvailableTools().map((toolName) => ({
-      name: toolName,
-      description: `Execute Windows maintenance tool: ${toolName}`,
-      inputSchema: {
+    const tools = getAvailableTools().map((toolName) => {
+      const schema = getToolSchema(toolName);
+      const properties: Record<string, any> = {};
+
+      if (schema) {
+        // Add required parameters to properties
+        for (const param of schema.required) {
+          properties[param] = {
+            type: 'string',
+            description: `Required parameter: ${param}${schema.pattern?.[param] ? ` (matches pattern: ${schema.pattern[param].source})` : ''}`,
+          };
+        }
+        // Add optional parameters to properties
+        for (const param of schema.optional) {
+          properties[param] = {
+            type: 'string',
+            description: `Optional parameter: ${param}${schema.pattern?.[param] ? ` (matches pattern: ${schema.pattern[param].source})` : ''}`,
+          };
+        }
+      }
+
+      // Keep legacy nested params object as well for backward compatibility
+      properties.params = {
         type: 'object',
-        properties: {
-          params: {
-            type: 'object',
-            description: 'Tool-specific parameters',
-          },
+        description: 'Deprecated: Use flat parameters instead. Legacy nested tool-specific parameters.',
+        additionalProperties: true,
+      };
+
+      return {
+        name: toolName,
+        description: `Execute Windows maintenance tool: ${toolName}`,
+        inputSchema: {
+          type: 'object',
+          properties,
+          required: schema?.required || [],
         },
-      },
-    }));
+      };
+    });
 
     logger.info({ toolCount: tools.length }, 'Listed available tools');
     return { tools };
@@ -61,7 +86,26 @@ async function main() {
     toolLogger.info('Executing tool call');
 
     try {
-      const params = (args?.params || {}) as Record<string, string>;
+      // Normalise flat parameters and legacy nested params object
+      const rawArgs = (args || {}) as Record<string, any>;
+      const nestedParams = (rawArgs.params || {}) as Record<string, any>;
+      
+      const params: Record<string, string> = {};
+      
+      // Merge flat arguments
+      for (const [key, value] of Object.entries(rawArgs)) {
+        if (key !== 'params' && value !== undefined && value !== null) {
+          params[key] = String(value);
+        }
+      }
+      
+      // Merge nested params (overwriting flat arguments if there's overlap)
+      for (const [key, value] of Object.entries(nestedParams)) {
+        if (value !== undefined && value !== null) {
+          params[key] = String(value);
+        }
+      }
+
       const result = await executeLauncherCommand(name, params, correlationId);
       toolLogger.info({ success: true, latencyMs: Date.now() - startedAt }, 'Tool execution completed');
       return {

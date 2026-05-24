@@ -1,5 +1,7 @@
 {
     "recommendations": [
-        "ms-vscode.powershell"
+        "ms-vscode.powershell",
+        "ms-toolsai.jupyter-renderers",
+        "anthropic.claude-code"
     ]
 }

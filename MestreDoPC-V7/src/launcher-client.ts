@@ -1,117 +1,105 @@
 /**
  * Launcher Client for MestreDoPC V7
  *
- * Communicates with MestreDoPC-Launcher.ps1 via HTTP (port 7777)
- * to execute PowerShell commands safely.
+ * Executes PowerShell commands directly via child_process — sem dependência de
+ * servidor externo ou aplicativo separado.
  */
 
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { logger } from './logger.js';
-import { buildSafeCommand, detectInjection } from './security/sanitizer.js';
+import { encodeCommand, detectInjection } from './security/sanitizer.js';
 import { validateToolParams } from './security/whitelist.js';
 
-/**
- * Launcher configuration
- */
-const LAUNCHER_BASE_URL = process.env.LAUNCHER_URL || 'http://localhost:7777';
-const DEFAULT_TIMEOUT_MS = 30000;
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
+const execFileAsync = promisify(execFile);
 
-interface RunResponse {
-  jobId: string;
-  status: string;
+type ScriptBuilder = (params: Record<string, string>) => string;
+
+const TOOL_SCRIPTS: Record<string, ScriptBuilder> = {
+  limpeza_rapida_completa: (params) => {
+    const dryRun = params.dryRun === 'true' ? '$true' : '$false';
+    return `$dryRun = ${dryRun}
+$tempPath = $env:TEMP
+$tempFiles = @(Get-ChildItem -Path $tempPath -Recurse -ErrorAction SilentlyContinue)
+if (-not $dryRun) {
+  Remove-Item -Path "$tempPath\\*" -Recurse -Force -ErrorAction SilentlyContinue
+  Clear-RecycleBin -Force -ErrorAction SilentlyContinue
 }
+@{ arquivos_temp_encontrados = $tempFiles.Count; simulacao = $dryRun; status = 'concluido' } | ConvertTo-Json`;
+  },
 
-interface RunStatusResponse {
-  status: 'running' | 'completed' | 'failed';
-  result?: any;
-  error?: string;
-}
+  liberar_memoria_ram: (_params) => `$before = [Math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024, 0)
+[System.GC]::Collect()
+[System.GC]::WaitForPendingFinalizers()
+$after = [Math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024, 0)
+@{ ram_livre_antes_MB = $before; ram_livre_depois_MB = $after; liberado_MB = ($after - $before); status = 'concluido' } | ConvertTo-Json`,
 
-async function postWithRetry(
-  url: string,
-  command: string,
-  requestLogger: typeof logger,
-  retries = MAX_RETRIES
-): Promise<RunResponse> {
-  let lastError: Error | null = null;
+  analizar_logs_sistema: (params) => {
+    const logName = params.logName || 'System';
+    const entryType = params.entryType || 'Error';
+    const hours = parseInt(params.hours || '24', 10);
+    return `$depois = (Get-Date).AddHours(-${hours})
+$eventos = Get-EventLog -LogName '${logName}' -EntryType ${entryType} -After $depois -Newest 50 -ErrorAction SilentlyContinue
+if ($null -eq $eventos) { '{"eventos":[],"total":0,"status":"ok"}' } else {
+  @{
+    eventos = @($eventos | Select-Object TimeGenerated, EntryType, Source, @{n='Mensagem';e={$_.Message.Substring(0,[Math]::Min(300,$_.Message.Length))}})
+    total = @($eventos).Count
+    status = 'ok'
+  } | ConvertTo-Json -Depth 4
+}`;
+  },
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    const attemptStart = Date.now();
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command }),
-        signal: AbortSignal.timeout(10000),
-      });
+  perguntar_ia: (params) => {
+    const model = params.model || 'qwen2.5:3b';
+    const maxTokens = params.maxTokens || '512';
+    const escapedPrompt = (params.prompt || '').replace(/'/g, "''");
+    return `$body = @{ model = '${model}'; prompt = '${escapedPrompt}'; stream = $false; options = @{ num_predict = ${maxTokens} } } | ConvertTo-Json -Compress
+try {
+  $r = Invoke-RestMethod -Uri 'http://localhost:11434/api/generate' -Method POST -Body $body -ContentType 'application/json; charset=utf-8' -TimeoutSec 120
+  @{ resposta = $r.response; model = '${model}'; status = 'ok' } | ConvertTo-Json
+} catch {
+  @{ erro = $_.Exception.Message; dica = 'Certifique-se de que o Ollama esta rodando: ollama serve'; status = 'falha' } | ConvertTo-Json
+}`;
+  },
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+  verificar_disco: (params) => {
+    const drive = (params.driveLetter || 'C').replace(/[^A-Z]/g, '');
+    return `$vol = Get-Volume -DriveLetter '${drive}' -ErrorAction SilentlyContinue
+if ($vol) {
+  @{
+    letra = $vol.DriveLetter
+    tamanho_GB = [Math]::Round($vol.Size / 1GB, 2)
+    livre_GB = [Math]::Round($vol.SizeRemaining / 1GB, 2)
+    usado_GB = [Math]::Round(($vol.Size - $vol.SizeRemaining) / 1GB, 2)
+    percentual_livre = [Math]::Round(($vol.SizeRemaining / $vol.Size) * 100, 1)
+    saude = $vol.HealthStatus
+    sistema_arquivo = $vol.FileSystemType
+    status = 'ok'
+  } | ConvertTo-Json
+} else {
+  @{ erro = 'Drive ${drive}: nao encontrado'; status = 'falha' } | ConvertTo-Json
+}`;
+  },
 
-      requestLogger.debug({ attempt, latencyMs: Date.now() - attemptStart }, 'Launcher submit attempt succeeded');
-      return await (response.json() as Promise<RunResponse>);
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Unknown error');
-      requestLogger.warn(
-        { attempt, maxRetries: retries, latencyMs: Date.now() - attemptStart, error: lastError.message },
-        'Retry attempt'
-      );
-
-      if (attempt < retries) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * attempt));
-      }
-    }
-  }
-
-  throw lastError || new Error('Failed to execute command after all retries');
-}
-
-async function pollForCompletion(
-  jobId: string,
-  requestLogger: typeof logger,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS
-): Promise<RunStatusResponse> {
-  const startTime = Date.now();
-  const pollInterval = 1000;
-
-  while (Date.now() - startTime < timeoutMs) {
-    const pollStart = Date.now();
-    try {
-      const response = await fetch(`${LAUNCHER_BASE_URL}/run-status?jobId=${jobId}`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const status = await (response.json() as Promise<RunStatusResponse>);
-      const elapsedMs = Date.now() - startTime;
-      const pollLatencyMs = Date.now() - pollStart;
-
-      if (status.status !== 'running') {
-        requestLogger.info({ jobId, elapsedMs, pollLatencyMs, status: status.status }, 'Launcher job completed state observed');
-        return status;
-      }
-
-      requestLogger.debug({ jobId, elapsedMs, pollLatencyMs }, 'Still running');
-    } catch (error) {
-      requestLogger.warn({ jobId, error: (error as Error).message, pollLatencyMs: Date.now() - pollStart }, 'Polling error');
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, pollInterval));
-  }
-
-  throw new Error(`Timeout waiting for job ${jobId} to complete`);
-}
+  reset_windows_update: (_params) => `try {
+  Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
+  Stop-Service -Name bits -Force -ErrorAction SilentlyContinue
+  Stop-Service -Name cryptsvc -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 3
+  Start-Service -Name cryptsvc -ErrorAction SilentlyContinue
+  Start-Service -Name bits -ErrorAction SilentlyContinue
+  Start-Service -Name wuauserv -ErrorAction SilentlyContinue
+  @{ mensagem = 'Windows Update reiniciado com sucesso'; status = 'ok' } | ConvertTo-Json
+} catch {
+  @{ erro = $_.Exception.Message; status = 'falha' } | ConvertTo-Json
+}`,
+};
 
 export async function executeLauncherCommand(
   toolName: string,
   params: Record<string, string>,
   correlationId?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
   const requestLogger = logger.child({ correlationId, toolName, params: Object.keys(params) });
   const executionStart = Date.now();
@@ -129,33 +117,85 @@ export async function executeLauncherCommand(
     }
   }
 
-  const safeCommand = buildSafeCommand(toolName, params);
-  requestLogger.info('Executing safe command');
+  const scriptFn = TOOL_SCRIPTS[toolName];
+  if (!scriptFn) {
+    throw new Error(`No implementation for tool: ${toolName}`);
+  }
 
   if (process.env.SIMULATION_MODE === 'true') {
     requestLogger.info({ totalDurationMs: Date.now() - executionStart }, 'Simulation mode - command not executed');
-    return {
-      simulated: true,
-      command: safeCommand,
-      message: 'Command would be executed in simulation mode',
-    };
+    return { simulated: true, tool: toolName, message: 'Command would be executed in simulation mode' };
   }
 
-  try {
-    const runResponse = await postWithRetry(`${LAUNCHER_BASE_URL}/run`, safeCommand, requestLogger);
-    requestLogger.info({ jobId: runResponse.jobId }, 'Command submitted to launcher');
+  const psScript = scriptFn(params);
+  const encoded = encodeCommand(psScript);
 
-    const result = await pollForCompletion(runResponse.jobId, requestLogger);
+  // Retrieve configuration from environment or defaults
+  const timeoutMs = parseInt(process.env.LAUNCHER_TIMEOUT || '30000', 10);
+  const maxAttempts = parseInt(process.env.LAUNCHER_RETRIES || '3', 10);
+  let attempt = 1;
+  let delay = 1000; // Starting delay of 1s for exponential backoff
 
-    if (result.status === 'failed') {
-      throw new Error(result.error || 'Job failed without error message');
+  while (attempt <= maxAttempts) {
+    const attemptStart = Date.now();
+    requestLogger.info({ attempt, maxAttempts, timeoutMs }, 'Executing PowerShell command directly');
+
+    try {
+      const { stdout, stderr } = await execFileAsync(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-OutputFormat', 'Text', '-EncodedCommand', encoded],
+        { timeout: timeoutMs, maxBuffer: 2 * 1024 * 1024 }
+      );
+
+      if (stderr) {
+        requestLogger.warn({ stderr: stderr.substring(0, 500) }, 'PowerShell stderr');
+      }
+
+      const output = stdout.trim();
+      let result;
+      try {
+        result = JSON.parse(output);
+      } catch {
+        result = { saida: output, status: 'ok' };
+      }
+
+      requestLogger.info(
+        { 
+          success: true, 
+          attempt, 
+          attemptDurationMs: Date.now() - attemptStart,
+          totalDurationMs: Date.now() - executionStart 
+        }, 
+        'Tool execution finished'
+      );
+      
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      requestLogger.warn(
+        { 
+          error: errorMessage, 
+          attempt, 
+          attemptDurationMs: Date.now() - attemptStart,
+          willRetry: attempt < maxAttempts 
+        }, 
+        'PowerShell execution attempt failed'
+      );
+
+      if (attempt === maxAttempts) {
+        requestLogger.error(
+          { error: errorMessage, totalDurationMs: Date.now() - executionStart }, 
+          'All PowerShell execution attempts failed'
+        );
+        throw new Error(`PowerShell execution failed: ${errorMessage}`);
+      }
+
+      // Wait with exponential backoff before the next attempt
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2;
+      attempt++;
     }
-
-    requestLogger.info({ totalDurationMs: Date.now() - executionStart }, 'Tool execution finished');
-    return result.result;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    requestLogger.error({ error: errorMessage, totalDurationMs: Date.now() - executionStart }, 'Execution failed');
-    throw error;
   }
 }
