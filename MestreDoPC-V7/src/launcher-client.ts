@@ -7,9 +7,9 @@
 
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { logger } from './logger.js';
-import { encodeCommand, detectInjection } from './security/sanitizer.js';
-import { validateToolParams } from './security/whitelist.js';
+import { logger } from './logger';
+import { encodeCommand, detectInjection } from './security/sanitizer';
+import { validateToolParams } from './security/whitelist';
 
 const execFileAsync = promisify(execFile);
 
@@ -97,11 +97,9 @@ if ($vol) {
 
 export async function executeLauncherCommand(
   toolName: string,
-  params: Record<string, string>,
-  correlationId?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any> {
-  const requestLogger = logger.child({ correlationId, toolName, params: Object.keys(params) });
+  params: Record<string, string>
+): Promise<unknown> {
+  const requestLogger = logger.child({ toolName, params: Object.keys(params) });
   const executionStart = Date.now();
 
   const validation = validateToolParams(toolName, params);
@@ -130,11 +128,10 @@ export async function executeLauncherCommand(
   const psScript = scriptFn(params);
   const encoded = encodeCommand(psScript);
 
-  // Retrieve configuration from environment or defaults
   const timeoutMs = parseInt(process.env.LAUNCHER_TIMEOUT || '30000', 10);
   const maxAttempts = parseInt(process.env.LAUNCHER_RETRIES || '3', 10);
   let attempt = 1;
-  let delay = 1000; // Starting delay of 1s for exponential backoff
+  let delay = 1000;
 
   while (attempt <= maxAttempts) {
     const attemptStart = Date.now();
@@ -160,42 +157,42 @@ export async function executeLauncherCommand(
       }
 
       requestLogger.info(
-        { 
-          success: true, 
-          attempt, 
+        {
+          success: true,
+          attempt,
           attemptDurationMs: Date.now() - attemptStart,
-          totalDurationMs: Date.now() - executionStart 
-        }, 
+          totalDurationMs: Date.now() - executionStart,
+        },
         'Tool execution finished'
       );
-      
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       requestLogger.warn(
-        { 
-          error: errorMessage, 
-          attempt, 
+        {
+          error: errorMessage,
+          attempt,
           attemptDurationMs: Date.now() - attemptStart,
-          willRetry: attempt < maxAttempts 
-        }, 
+          willRetry: attempt < maxAttempts,
+        },
         'PowerShell execution attempt failed'
       );
 
       if (attempt === maxAttempts) {
         requestLogger.error(
-          { error: errorMessage, totalDurationMs: Date.now() - executionStart }, 
+          { error: errorMessage, totalDurationMs: Date.now() - executionStart },
           'All PowerShell execution attempts failed'
         );
         throw new Error(`PowerShell execution failed: ${errorMessage}`);
       }
 
-      // Wait with exponential backoff before the next attempt
       await new Promise(resolve => setTimeout(resolve, delay));
       delay *= 2;
       attempt++;
     }
   }
+
+  throw new Error('Unreachable: executeLauncherCommand loop exhausted without return or throw');
 }
