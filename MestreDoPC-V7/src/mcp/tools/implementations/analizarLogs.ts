@@ -17,7 +17,7 @@ export class AnalizarLogsSistema extends BaseTool {
   readonly parameters = [
     { name: 'logName', type: 'string' as const, required: false, description: 'Nome do log (ex: System, Application)' },
     { name: 'entryType', type: 'string' as const, required: false, description: 'Tipo de entrada: Error, Warning, Information' },
-    { name: 'hours', type: 'integer' as const, required: false, description: 'Quantidade de horas para analisar' },
+    { name: 'hours', type: 'integer' as const, required: false, description: 'Quantidade de horas para analisar', min: 1 },
   ];
 
   protected async executeImpl(params: Record<string, string>): Promise<ToolResult> {

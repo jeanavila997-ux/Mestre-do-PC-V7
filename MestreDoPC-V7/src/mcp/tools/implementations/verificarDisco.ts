@@ -15,7 +15,7 @@ export class VerificarDisco extends BaseTool {
   readonly name = 'verificar_disco';
   readonly description = 'Verifica a integridade e saúde do disco (SMART, espaço, erros)';
   readonly parameters = [
-    { name: 'driveLetter', type: 'string' as const, required: true, description: 'Letra da unidade (A-Z)' },
+    { name: 'driveLetter', type: 'string' as const, required: true, description: 'Letra da unidade (A-Z)', pattern: /^[a-zA-Z]$/ },
     { name: 'fixErrors', type: 'boolean' as const, required: false, description: 'Tenta corrigir erros automaticamente' },
   ];
 

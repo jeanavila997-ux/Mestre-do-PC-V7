@@ -15,7 +15,7 @@ export class LiberarMemoriaRam extends BaseTool {
   readonly name = 'liberar_memoria_ram';
   readonly description = 'Libera memória RAM do sistema, opcionalmente definindo um target em MB';
   readonly parameters = [
-    { name: 'targetMB', type: 'integer' as const, required: false, description: 'Quantidade de memória alvo em MB' },
+    { name: 'targetMB', type: 'integer' as const, required: false, description: 'Quantidade de memória alvo em MB', min: 1 },
   ];
 
   protected async executeImpl(params: Record<string, string>): Promise<ToolResult> {

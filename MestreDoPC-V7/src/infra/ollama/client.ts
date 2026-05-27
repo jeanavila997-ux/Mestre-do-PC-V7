@@ -5,8 +5,9 @@
  */
 
 import { logger } from '../logger';
+import { config } from '../../config/index';
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_BASE_URL = config.ollama.baseUrl;
 
 export interface OllamaGenerateRequest {
   model: string;

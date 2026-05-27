@@ -14,7 +14,7 @@ export class PerguntarIA extends BaseTool {
   readonly parameters = [
     { name: 'prompt', type: 'string' as const, required: true, description: 'Texto da pergunta para a IA' },
     { name: 'model', type: 'string' as const, required: false, description: 'Nome do modelo Ollama (default: llama3)' },
-    { name: 'maxTokens', type: 'integer' as const, required: false, description: 'Máximo de tokens na resposta' },
+    { name: 'maxTokens', type: 'integer' as const, required: false, description: 'Máximo de tokens na resposta', min: 1 },
   ];
 
   protected async executeImpl(params: Record<string, string>): Promise<ToolResult> {

@@ -22,6 +22,9 @@ export interface Config {
   simulation: {
     enabled: boolean;
   };
+  ollama: {
+    baseUrl: string;
+  };
 }
 
 function getEnv(name: string, defaultValue?: string): string {
@@ -64,6 +67,9 @@ export const config: Config = {
   },
   simulation: {
     enabled: getEnvBool('SIMULATION_MODE', false),
+  },
+  ollama: {
+    baseUrl: getEnv('OLLAMA_URL', 'http://localhost:11434'),
   },
 };
 

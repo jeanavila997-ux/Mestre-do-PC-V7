@@ -55,10 +55,20 @@ export abstract class BaseTool implements ITool {
     const required: string[] = [];
 
     for (const param of this.parameters) {
-      properties[param.name] = {
+      const schema: Record<string, unknown> = {
         type: param.type,
         description: param.description || '',
       };
+      if (param.pattern) {
+        schema.pattern = param.pattern.source;
+      }
+      if (param.min !== undefined) {
+        schema.minimum = param.min;
+      }
+      if (param.max !== undefined) {
+        schema.maximum = param.max;
+      }
+      properties[param.name] = schema;
       if (param.required) {
         required.push(param.name);
       }

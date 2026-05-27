@@ -193,4 +193,6 @@ export async function executeLauncherCommand(
       attempt++;
     }
   }
+
+  throw new Error('Unreachable: executeLauncherCommand loop exhausted without return or throw');
 }
