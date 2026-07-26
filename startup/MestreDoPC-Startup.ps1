@@ -1,13 +1,13 @@
 # ================================================================
-# Mestre do PC V8 - Script de Inicializacao
+# Mestre do PC V10 - Script de Inicializacao
 # ================================================================
-# Roda no logon via tarefa agendada MestreDoPC_Startup.
+# Roda no logon via tarefa agendada MESTREDOPC_STARTUP.
 # NAO precisa de Admin — apenas verifica e garante servicos.
 #
 # Fluxo:
 #   1. Aguarda 10s (sistema completar o login)
 #   2. Garante Ollama rodando em localhost:11434
-#   3. Pre-aquece modelo gemma4:31b-cloud
+#   3. Pre-aquece o modelo local padrao
 #   4. Garante launcher Mestre do PC rodando em :7777
 # ================================================================
 
@@ -18,7 +18,7 @@ $OllamaExe  = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
 $OllamaApi  = "http://localhost:11434"
 $LauncherTask = "MestreDoPC_Admin_Launcher"
 $MestreApi  = "http://127.0.0.1:7777"
-$Model      = "glm-5.2:cloud"               # cloud (ollama.com), maior contexto/capacidade
+$Model      = "qwen2.5-coder:1.5b"          # local, funciona offline e sem login
 
 function Log {
     param([string] $msg)
@@ -73,7 +73,7 @@ if ($ollamaOk) {
 }
 
 # ------------------------------------------------------------------
-# 3. Pre-aquece gemma4:31b-cloud (keepalive = modelo fica em RAM)
+# 3. Pre-aquece o modelo local por 10 minutos
 # ------------------------------------------------------------------
 if ($ollamaOk) {
     Log "Pre-aquecendo modelo $Model ..."

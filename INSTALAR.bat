@@ -16,7 +16,8 @@ if %errorlevel% equ 0 goto :runInstall
 
 :: Nao e Admin: eleva e espera terminar
 powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""%~dp0install.ps1""'"
+  "$p=Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList '-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""%~dp0install.ps1""'; exit $p.ExitCode"
+if %errorlevel% neq 0 goto :installFailed
 
 :openApp
 echo.
@@ -29,4 +30,12 @@ exit /b 0
 :runInstall
 :: Ja e Admin: roda direto
 powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
+if %errorlevel% neq 0 goto :installFailed
 goto :openApp
+
+:installFailed
+echo.
+echo  [ERRO] A instalacao nao foi concluida.
+echo.
+pause
+exit /b 1

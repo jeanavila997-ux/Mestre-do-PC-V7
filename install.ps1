@@ -1,5 +1,5 @@
 # ================================================================
-# Mestre do PC V8 - Instalador Automatizado
+# Mestre do PC V10 - Instalador Automatizado
 # ================================================================
 # Instala Node.js (se ausente), dependencias do MCP, tarefa agendada,
 # registra o MCP no Claude Desktop e cria atalhos.
@@ -48,6 +48,8 @@ $required = @(
     "MestreDoPC-Launcher.ps1",
     "Register-MestreTask.ps1",
     "start-mestre.bat",
+    "v10\start-v10.bat",
+    "v10\index.html",
     "mcp-server\package.json",
     "mcp-server\index.js"
 )
@@ -134,7 +136,7 @@ Write-Ok "Tarefa 'MestreDoPC_Admin_Launcher' registrada com trigger AtLogon."
 
 # ---------------------------------------------------------------
 # 4b. Tarefa de Startup (usuario, AtLogon, sem Admin)
-#     Garante Ollama + pre-aquece gemma4 + re-sobe launcher se morreu
+#     Garante Ollama + pre-aquece o modelo local + re-sobe launcher se morreu
 # ---------------------------------------------------------------
 Write-Step "Registrando tarefa de startup (Ollama + modelo)..."
 $startupScript = Join-Path $InstallDir "startup\MestreDoPC-Startup.ps1"
@@ -250,7 +252,7 @@ if (-not $SkipMcpConfig) {
 # ---------------------------------------------------------------
 if (-not $NoShortcuts) {
     Write-Step "Criando atalhos..."
-    $startBat = Join-Path $InstallDir "start-mestre.bat"
+    $startBat = Join-Path $InstallDir "v10\start-v10.bat"
     $iconPath = Join-Path $InstallDir "icon.ico"
 
     $targets = @(
@@ -262,9 +264,9 @@ if (-not $NoShortcuts) {
     foreach ($lnk in $targets) {
         $s = $wsh.CreateShortcut($lnk)
         $s.TargetPath       = $startBat
-        $s.WorkingDirectory = $InstallDir
+        $s.WorkingDirectory = Join-Path $InstallDir "v10"
         if (Test-Path $iconPath) { $s.IconLocation = $iconPath }
-        $s.Description      = "Mestre do PC V8"
+        $s.Description      = "Mestre do PC V10 - Ultimate Plus"
         $s.Save()
     }
     Write-Ok "Atalhos criados."
@@ -292,7 +294,7 @@ for ($i = 0; $i -lt 20; $i++) {
 if ($ok) {
     Write-Ok "Launcher respondendo em http://127.0.0.1:7777"
 } else {
-    Write-Warn2 "Launcher nao respondeu em 20s. Verifique manualmente rodando start-mestre.bat"
+    Write-Warn2 "Launcher nao respondeu em 20s. Verifique manualmente rodando v10\start-v10.bat"
 }
 
 Write-Host ""

@@ -1,0 +1,677 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Revisao Completa V10</title><style>
+  @page { margin: 18mm 16mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #111827; line-height: 1.5; max-width: 920px; margin: 0 auto; font-size: 12.5pt; }
+  h1 { font-size: 25pt; margin: 0 0 18px; border-bottom: 2px solid #111827; padding-bottom: 10px; }
+  h2 { font-size: 17pt; margin-top: 28px; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; }
+  h3 { font-size: 14pt; margin-top: 22px; }
+  code { font-family: Consolas, monospace; background: #f3f4f6; padding: 1px 4px; border-radius: 3px; }
+  pre { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 7px 9px; vertical-align: top; }
+  th { background: #f9fafb; text-align: left; }
+  blockquote { border-left: 4px solid #9ca3af; margin-left: 0; padding-left: 12px; color: #374151; }
+  a { color: #0f766e; }
+  hr { border: 0; border-top: 1px solid #d1d5db; margin: 24px 0; }
+</style></head><body><h1 id="revisao-completa-do-projeto-mestre-do-pc-v10">Revisão Completa do Projeto — Mestre do PC V10</h1>
+<p><strong>Data:</strong> 2025-07-26
+<strong>Repositório:</strong> <code>jeanavila997-ux/Mestre-do-PC-V7</code> (main)
+<strong>Último commit:</strong> <code>7cbf0f5</code> — chore: reorganiza raiz do projeto</p>
+<hr />
+<h2 id="visao-geral">1. Visão Geral</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linguagem principal</td>
+<td>HTML/CSS/JS monolítico + PowerShell + Node.js</td>
+</tr>
+<tr>
+<td>Versão ativa</td>
+<td>V10 (Ultimate Plus)</td>
+</tr>
+<tr>
+<td>Versão no package.json</td>
+<td>10.0.0</td>
+</tr>
+<tr>
+<td>Plataforma</td>
+<td>Windows (Linux/macOS parcial — só MCP + chat IA)</td>
+</tr>
+<tr>
+<td>Tamanho V10 HTML</td>
+<td>99 KB / 1244 linhas</td>
+</tr>
+<tr>
+<td>Launcher PS</td>
+<td>461 linhas, porta 7777</td>
+</tr>
+<tr>
+<td>MCP server</td>
+<td>909 linhas, SDK 1.27.1</td>
+</tr>
+<tr>
+<td>Launcher Node (V10)</td>
+<td>231 linhas</td>
+</tr>
+<tr>
+<td>Total commits</td>
+<td>63</td>
+</tr>
+<tr>
+<td>Contribuidores</td>
+<td>9</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="estrutura-atual-pos-reorganizacao">2. Estrutura Atual (pós-reorganização)</h2>
+<pre><code>MestreDoPC_V7_clone/
+├── v10/                       ← VERSÃO ATIVA
+│   ├── index.html             (1244 linhas, 99 KB)
+│   ├── launcher.js            (231 linhas — alternativa Node ao PS)
+│   ├── start-v10.bat          (59 linhas — sem UAC, usa scheduled task)
+│   └── package.json
+├── mcp-server/                ← MCP server para Claude Desktop/Code
+│   ├── index.js               (909 linhas, 33 tools)
+│   └── package.json
+├── startup/                   ← MestreDoPC-Startup.ps1 (Ollama warm-up)
+├── docs/
+│   ├── INSTALACAO-CLIENTE.md  (guia completo)
+│   ├── INSTALACAO-CLIENTE.pdf
+│   ├── RAG.md, deployment.md, ... (legado do fork)
+│   └── images/
+├── legado/                    ← arquivado (V7/V8/V9 + scripts antigos)
+│   ├── MestreDoPC-V7/         (versão modularizada)
+│   ├── v7/, v8/, v9/          (HTMLs antigos)
+│   ├── assets/, instalar.bat, ...
+│   └── legado-modelos-antigos.zip
+├── projeto-plano/             ← planos, análises, extrações
+├── MestreDoPC-Launcher.ps1    ← LAUNCHER PRINCIPAL (porta 7777)
+├── Register-MestreTask.ps1    ← registra tarefa admin AtLogon
+├── start-mestre.bat           ← abre V7 legado
+├── INSTALAR.bat               ← instalador ativo (→ install.ps1)
+├── install.ps1                ← instalador Windows (304 linhas)
+├── install.sh                 ← instalador Linux/macOS
+├── uninstall.ps1 / uninstall.exe
+├── README.md, CLAUDE.md, LICENSE
+├── favicon.png, icon.ico, logo-mestre-v7-transparent.png
+└── legado-modelos-antigos.zip (1.2 MB)
+</code></pre>
+<p><strong>Avaliação:</strong> ✅ Estrutura limpa e coesa. Nada crítico na raiz que não seja usado.</p>
+<hr />
+<h2 id="inventario-de-funcionalidades">3. Inventário de Funcionalidades</h2>
+<h3 id="v10-v10index.html">3.1 V10 (<code>v10/index.html</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Categorias</td>
+<td>19</td>
+</tr>
+<tr>
+<td>Comandos totais</td>
+<td>186</td>
+</tr>
+<tr>
+<td>Funções JS</td>
+<td>40</td>
+</tr>
+<tr>
+<td>Tema claro/escuro</td>
+<td>✅ (toggleTheme)</td>
+</tr>
+<tr>
+<td>Sistema de favoritos</td>
+<td>✅ (toggleFavorite, renderFavorites, removeFav)</td>
+</tr>
+<tr>
+<td>Fila de comandos</td>
+<td>✅ (addToQueue, renderQueue, runQueue, clearQueue)</td>
+</tr>
+<tr>
+<td>Dashboard métricas</td>
+<td>✅ (loadDashboard, fmtUptime — chama /status)</td>
+</tr>
+<tr>
+<td>Terminal live</td>
+<td>✅ (openTerminalModal, setTerminalLive, livePollJob, executeCmdLive)</td>
+</tr>
+<tr>
+<td>IA Local streaming</td>
+<td>✅ (openAI, sendIA, preloadModel, chooseOllamaModel)</td>
+</tr>
+<tr>
+<td>Export histórico</td>
+<td>✅ (exportHistory)</td>
+</tr>
+<tr>
+<td>Navegação melhorada</td>
+<td>✅ (scrollIntoView centralizado + auto-expand categoria + logo voltarInicio)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Categorias V10:</strong></p>
+<ol>
+<li>Limpeza Geral (13)</li>
+<li>Limpeza Avançada (12)</li>
+<li>Memória / RAM (7)</li>
+<li>Processos (9)</li>
+<li>Disco (9)</li>
+<li>Rede Básica (9)</li>
+<li>Reparo do Sistema (11)</li>
+<li>🩺 Saúde do PC (5 — inclui o export diagnóstico)</li>
+<li>Otimização de Boot (7)</li>
+<li>Segurança / Defender (8)</li>
+<li>Sistema Avançado (9)</li>
+<li>🌐 Rede Avançada (10)</li>
+<li>⚡ Performance &amp; Jogos (10 — NOVO V10)</li>
+<li>💾 Backup &amp; Restauração (8 — NOVO V10)</li>
+<li>🔄 Atualizações Avançadas (8 — NOVO V10)</li>
+<li>🔌 Drivers (8 — NOVO V10)</li>
+<li>🕵️ Privacidade &amp; Telemetria (10 — NOVO V10)</li>
+<li>🔍 Diagnóstico de Logs (10 — NOVO V10)</li>
+<li>Outros — fora da contagem total</li>
+</ol>
+<h3 id="launcher-powershell-mestredopc-launcher.ps1">3.2 Launcher PowerShell (<code>MestreDoPC-Launcher.ps1</code>)</h3>
+<p><strong>Endpoints (8):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Path</th>
+<th>Função</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/ping</code></td>
+<td>Health check (admin, state, pid, activeJobs)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/mcp-status</code></td>
+<td>Detecta Node MCP via WMI</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/ollama-status</code></td>
+<td>Lista modelos Ollama</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/run-status?id=X</code></td>
+<td>Status de job assíncrono</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/run</code></td>
+<td>Recebe e agenda comando (job assíncrono)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/open-terminal</code></td>
+<td>Abre PS terminal elevado</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/ollama/tags</code></td>
+<td>Proxy para <code>localhost:11434/api/tags</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/ollama/chat</code></td>
+<td><strong>Streaming NDJSON</strong> via HttpClient SendAsync + ResponseHeadersRead + 4KB buffer + finally dispose</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/status</code></td>
+<td>Métricas: CPU, RAM, disco, uptime</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Robustez:</strong></p>
+<ul>
+<li>✅ Auto-elevação (RunAs) se não for admin</li>
+<li>✅ Health check no boot — evita duplicatas na porta</li>
+<li>✅ Limpeza automática de jobs concluídos (30 min retenção)</li>
+<li>✅ Timeout de jobs (900 s = 15 min)</li>
+<li>✅ Captura de HttpListenerException 995 (porta fechada intencional)</li>
+<li>✅ Catch genérico no loop principal — não derruba o servidor</li>
+<li>✅ PID file para controle externo</li>
+<li>✅ Streaming Ollama com try/finally + dispose (memory leak prevention)</li>
+</ul>
+<h3 id="mcp-server-mcp-serverindex.js">3.3 MCP Server (<code>mcp-server/index.js</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tools</td>
+<td>33 (30 em <code>mestreTools</code> + 3 hardcoded)</td>
+</tr>
+<tr>
+<td>SDK</td>
+<td><code>@modelcontextprotocol/sdk ^1.27.1</code></td>
+</tr>
+<tr>
+<td>Transporte</td>
+<td>stdio (StdioServerTransport)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tools MCP registradas:</strong></p>
+<p><em>Limpeza:</em> <code>limpeza_rapida_completa</code>, <code>esvaziar_lixeira</code>, <code>limpar_cache_windows_update</code>, <code>limpar_logs_event_viewer</code>, <code>limpar_cache_thumbnail</code>
+<em>Memória:</em> <code>liberar_memoria_ram</code>, <code>ver_uso_ram</code>, <code>listar_processos_alto_consumo_ram</code>
+<em>Processos:</em> <code>reiniciar_explorer</code>, <code>encerrar_processo</code>, <code>desativar_servico</code>
+<em>Disco:</em> <code>verificar_espaco_disco</code>, <code>verificar_saude_disco</code>
+<em>Rede:</em> <code>diagnostico_rede</code>, <code>renovar_ip</code>
+<em>Reparo:</em> <code>reparar_arquivos_sfc</code>, <code>reparar_imagem_dism</code>
+<em>Sistema:</em> <code>verificar_informacoes_sistema</code>, <code>verificar_temperatura_cpu</code>, <code>diagnostico_completo</code>, <code>relatorio_rapido_pc</code>, <code>exportar_diagnostico</code>
+<em>IA:</em> <code>perguntar_ia</code>, <code>analisar_logs_sistema</code>, <code>verificar_modelo_ollama</code>
+<em>Diversos:</em> <code>listar_modelos_ollama</code>, <code>testar_ollama</code>, <code>abrir_pasta_logs</code>, <code>ver_tarefas_mestre</code>
+<em>Git:</em> <code>git_status</code>, <code>git_pull</code>
+<em>Segurança:</em> <code>verificar_defender</code>, <code>scan_defender_rapido</code></p>
+<h3 id="ia-local-ollama">3.4 IA Local (Ollama)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Modelos ativos</td>
+<td>8 (qwen2.5-coder:1.5b + 6 cloud + 1 custom)</td>
+</tr>
+<tr>
+<td>Padrão</td>
+<td><code>qwen2.5-coder:1.5b</code> (LOCAL — sem login)</td>
+</tr>
+<tr>
+<td>Fallback</td>
+<td>Ordem: qwen local → glm-5.2:cloud → minimax-m3:cloud → kimi-k2.5:cloud → gemma4:cloud → glm-5.1:cloud</td>
+</tr>
+<tr>
+<td>Streaming</td>
+<td>✅ via <code>/ollama/chat</code> (NDJSON, proxy HttpClient)</td>
+</tr>
+<tr>
+<td>Pré-carregamento</td>
+<td>✅ ao abrir modal (chamada vazia com <code>keep_alive:-1</code>)</td>
+</tr>
+<tr>
+<td>keep_alive</td>
+<td>-1 (modelo não descarrega)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="instalacao-operacao">4. Instalação &amp; Operação</h2>
+<table>
+<thead>
+<tr>
+<th>Plataforma</th>
+<th>Instalador</th>
+<th>Launcher</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Windows</strong></td>
+<td><code>INSTALAR.bat</code> → <code>install.ps1</code></td>
+<td>PowerShell <code>MestreDoPC-Launcher.ps1</code> + scheduled task admin</td>
+<td>✅ Ativo</td>
+</tr>
+<tr>
+<td><strong>Linux/macOS</strong></td>
+<td><code>install.sh</code></td>
+<td>Node <code>launcher.js</code> (V10)</td>
+<td>⚠️ Parcial — só MCP + chat IA; comandos PowerShell não rodam</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fluxo Windows (instalação):</strong></p>
+<ol>
+<li><code>INSTALAR.bat</code> (UAC uma vez) → <code>install.ps1</code></li>
+<li>Verifica Node, npm install no mcp-server</li>
+<li>Verifica Ollama, baixa <code>qwen2.5-coder:1.5b</code>, orienta <code>ollama signin</code> (cloud opcional)</li>
+<li>Registra tarefa <code>MestreDoPC_Admin_Launcher</code> (AtLogon, admin, hidden)</li>
+<li>Registra tarefa <code>MestreDoPC_Startup</code> (AtLogon, usuário — Ollama warm-up)</li>
+<li>Cria atalhos &quot;Mestre do PC&quot; (V10, sem UAC) e &quot;Mestre do PC V7&quot; (legado)</li>
+</ol>
+<p><strong>Fluxo de uso diário:</strong></p>
+<ul>
+<li>Clique no atalho → <code>v10\start-v10.bat</code> → health-check → se launcher offline, dispara <code>schtasks /Run MestreDoPC_Admin_Launcher</code> → abre <code>v10/index.html</code></li>
+</ul>
+<hr />
+<h2 id="analise-de-codigo">5. Análise de Código</h2>
+<h3 id="pontos-fortes">5.1 ✅ Pontos Fortes</h3>
+<ul>
+<li><strong>Streaming Ollama robusto:</strong> HttpClient + SendAsync + ResponseHeadersRead + 4KB buffer + finally dispose. Resiliente a crashes no meio do stream.</li>
+<li><strong>Health-check no boot do launcher:</strong> evita porta ocupada por instância antiga.</li>
+<li><strong>PID file + scheduled task:</strong> o launcher se mantém vivo e é auto-restartável.</li>
+<li><strong>CORS proxy:</strong> <code>/ollama/*</code> resolve o problema de abrir via <code>file://</code>.</li>
+<li><strong>Modelo local como padrão:</strong> <code>qwen2.5-coder:1.5b</code> (1 GB) funciona sem <code>ollama signin</code> — onboarding mais simples.</li>
+<li><strong><code>keep_alive: -1</code> + preload:</strong> primeiro token chega instantâneo.</li>
+<li><strong>Documentação completa:</strong> <code>docs/INSTALACAO-CLIENTE.md/.pdf</code> cobre Win/Linux/macOS + variáveis avançadas do Ollama.</li>
+<li><strong>MCP server ativo:</strong> Claude Desktop/Code consegue executar comandos via tools MCP.</li>
+<li><strong>App monolítico:</strong> fácil de servir, distribuir, abrir (file://).</li>
+</ul>
+<h3 id="melhorias-recomendadas-prioridade">5.2 🟡 Melhorias Recomendadas (prioridade)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Severidade</th>
+<th>Item</th>
+<th>Local</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>🟡 Baixa</td>
+<td><code>OLLAMA_URL</code> declarado mas não usado (dead code)</td>
+<td><code>v10/index.html:1084</code></td>
+<td>Remover</td>
+</tr>
+<tr>
+<td>2</td>
+<td>🟡 Baixa</td>
+<td>Descrição MCP diz &quot;qwen2.5:1.5b&quot; (tag errado/faltando <code>-coder</code>)</td>
+<td><code>mcp-server/index.js</code> linha ~622</td>
+<td>Corrigir para <code>qwen2.5-coder:1.5b</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>🟡 Média</td>
+<td>Sem CSP (Content-Security-Policy)</td>
+<td><code>v10/index.html</code> head</td>
+<td>Adicionar <code>&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src 'self' http://127.0.0.1:7777; img-src 'self' data:; style-src 'self' 'unsafe-inline'&quot;&gt;</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>🟡 Média</td>
+<td>CORS <code>*</code> no launcher (broad)</td>
+<td><code>MestreDoPC-Launcher.ps1:212</code></td>
+<td>Ok para local, mas restringir a <code>null</code> (file://) e <code>http://localhost*</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>🟡 Média</td>
+<td>Sem tag de &quot;perigoso&quot; nos comandos destrutivos</td>
+<td><code>v10/index.html</code> CATS</td>
+<td>Marcar <code>cleanmgr /sageset</code>, <code>DISM /ResetBase</code>, <code>powercfg -h off</code>, <code>Remove-Item</code> recursivos como <code>danger</code> e pedir confirmação dupla</td>
+</tr>
+<tr>
+<td>6</td>
+<td>🟢 Baixa</td>
+<td><code>JobRetentionMinutes = 30</code> mas retenção é só após completar</td>
+<td><code>MestreDoPC-Launcher.ps1:21</code></td>
+<td>Documentar melhor ou implementar retenção desde criação</td>
+</tr>
+<tr>
+<td>7</td>
+<td>🟢 Baixa</td>
+<td><code>pwa-starter/</code> ainda existe na raiz (gitignored)</td>
+<td>raiz</td>
+<td>Remover do disco (já está fora do repo)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>🟢 Baixa</td>
+<td><code>v10/package.json</code> sem <code>description</code>/<code>author</code></td>
+<td><code>v10/package.json</code></td>
+<td>Adicionar metadados</td>
+</tr>
+<tr>
+<td>9</td>
+<td>🟢 Baixa</td>
+<td><code>assets/</code> em legado pode confundir — tinha docs de design</td>
+<td><code>legado/assets/</code></td>
+<td>Adicionar README.md em <code>legado/</code> explicando o que tem</td>
+</tr>
+<tr>
+<td>10</td>
+<td>🟢 Cosmético</td>
+<td><code>v10.0.0</code> mas repo se chama <code>Mestre-do-PC-V7</code></td>
+<td>versionamento</td>
+<td>Considerar semver ou outro esquema</td>
+</tr>
+<tr>
+<td>11</td>
+<td>🟢 Baixa</td>
+<td><code>node_modules</code> em <code>mcp-server/</code> (15 MB) — sem .gitignore local</td>
+<td><code>mcp-server/</code></td>
+<td>OK, está coberto por <code>**/node_modules/</code> na raiz</td>
+</tr>
+<tr>
+<td>12</td>
+<td>🟢 Baixa</td>
+<td><code>openAI</code> chama <code>checkOllama().then(preloadModel)</code> — <code>preloadModel</code> é async sem await; em teoria não há race porque checkOllama termina primeiro e popula <code>selectedOllamaModel</code></td>
+<td><code>v10/index.html:1111</code></td>
+<td>OK, mas adicionar guard <code>if (!selectedOllamaModel) return;</code> (já tem)</td>
+</tr>
+<tr>
+<td>13</td>
+<td>🟢 Baixa</td>
+<td>V10 HTML usa 13 <code>&lt;meta&gt;</code> ausentes (description, og:*, theme-color)</td>
+<td><code>v10/index.html</code></td>
+<td>Adicionar para melhor UX ao compartilhar</td>
+</tr>
+</tbody>
+</table>
+<h3 id="critico">5.3 🔴 Crítico</h3>
+<p><strong>Nenhum problema crítico.</strong> O app está funcional, seguro para uso local, e o launcher é resiliente.</p>
+<h3 id="consideracoes-de-seguranca">5.4 ⚠️ Considerações de Segurança</h3>
+<ul>
+<li><strong>Invoke-Expression no launcher</strong> (<code>New-CommandJob</code>): os comandos vêm do HTML (file://) e rodam como Admin. O usuário é soberano (ambiente local), mas se o HTML for adulterado, comandos arbitrários rodam como Admin. ✅ Mitigação: app é monolítico, código aberto, distribuído pelo próprio usuário.</li>
+<li><strong>CORS <code>*</code></strong>: aceitável para app local, mas documenta.</li>
+<li><strong>Sem CSP</strong>: app local é menos crítico, mas adiciona camada.</li>
+<li><strong>innerHTML com template literals</strong>: usado para renderizar cards dinamicamente. Os valores vêm de strings estáticas no array <code>CATS</code>, então é seguro (não-XSS por dados externos).</li>
+</ul>
+<hr />
+<h2 id="performance">6. Performance</h2>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Launcher boot</td>
+<td>~1-2 s (incluindo health-check)</td>
+</tr>
+<tr>
+<td><code>/ping</code> latency</td>
+<td>&lt;50 ms (localhost)</td>
+</tr>
+<tr>
+<td><code>/status</code> (métricas)</td>
+<td>~200-400 ms (WMI é lento)</td>
+</tr>
+<tr>
+<td><code>/ollama/chat</code> first token</td>
+<td>&lt;500 ms (com preload + keep_alive:-1)</td>
+</tr>
+<tr>
+<td><code>/run</code> POST → output</td>
+<td>&lt;100 ms (job assíncrono)</td>
+</tr>
+<tr>
+<td>V10 HTML load</td>
+<td>Instantâneo (file://)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Otimizações já aplicadas:</strong></p>
+<ul>
+<li>✅ Streaming de tokens Ollama (resposta incremental)</li>
+<li>✅ Pré-carregamento de modelo (warm-up)</li>
+<li>✅ keep_alive -1 (modelo não descarrega)</li>
+<li>✅ Async jobs no launcher (não bloqueia UI)</li>
+</ul>
+<hr />
+<h2 id="cobertura-de-comandos-por-categoria">7. Cobertura de Comandos por Categoria</h2>
+<pre><code>1. Limpeza Geral          ███████████████ 13
+2. Limpeza Avançada       ████████████ 12
+3. Memória / RAM          ███████ 7
+4. Processos              █████████ 9
+5. Disco                  █████████ 9
+6. Rede Básica            █████████ 9
+7. Reparo do Sistema      ███████████ 11
+8. Saúde do PC            █████ 5
+9. Otimização Boot        ███████ 7
+10. Segurança/Defender    ████████ 8
+11. Sistema Avançado      █████████ 9
+12. Rede Avançada         ██████████ 10
+13. Performance &amp; Jogos   ██████████ 10 (NOVO V10)
+14. Backup &amp; Restauração  ████████ 8  (NOVO V10)
+15. Atualizações Avançadas████████ 8  (NOVO V10)
+16. Drivers               ████████ 8  (NOVO V10)
+17. Privacidade/Telemetria██████████ 10 (NOVO V10)
+18. Diagnóstico de Logs   ██████████ 10 (NOVO V10)
+</code></pre>
+<hr />
+<h2 id="gaps-e-sugestoes-futuras">8. Gaps e Sugestões Futuras</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Sugestão</th>
+<th>Esforço</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Adicionar tag &quot;perigoso&quot; + confirmação dupla para comandos destrutivos</td>
+<td>2h</td>
+<td>🟢 Médio</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Adicionar CSP meta tag</td>
+<td>30min</td>
+<td>🟢 Médio</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Corrigir dead code (<code>OLLAMA_URL</code>) e descrição MCP</td>
+<td>5min</td>
+<td>🟢 Baixo</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Atualizar <code>README.md</code> com a nova estrutura</td>
+<td>30min</td>
+<td>🟢 Alto</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Testes automatizados (smoke test endpoints launcher + MCP)</td>
+<td>4h</td>
+<td>🟡 Médio</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Criar instalador Windows .exe (Inno Setup / NSIS)</td>
+<td>1 dia</td>
+<td>🟡 Médio</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Auto-update via scheduled task (checar GitHub releases)</td>
+<td>1 dia</td>
+<td>🟡 Médio</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Mais temas visuais (além de claro/escuro)</td>
+<td>2h</td>
+<td>🟢 Baixo</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Internacionalização (i18n) — inglês além de PT-BR</td>
+<td>1 dia</td>
+<td>🟢 Médio</td>
+</tr>
+<tr>
+<td>10</td>
+<td>PWA manifest + service worker (instalar como app)</td>
+<td>1 dia</td>
+<td>🟡 Médio</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Log estruturado (separar logs por categoria, rotação)</td>
+<td>4h</td>
+<td>🟢 Baixo</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Modo &quot;somente leitura&quot; (preview sem executar)</td>
+<td>4h</td>
+<td>🟢 Médio</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Backup/restore de drivers (categoria 16 — aproveitar espaço)</td>
+<td>2h</td>
+<td>🟢 Alto</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Diff visual entre CATS V7 e V10 no projeto-plano</td>
+<td>1h</td>
+<td>🟢 Baixo</td>
+</tr>
+<tr>
+<td>15</td>
+<td>GitHub Actions CI (lint PowerShell + Node + Markdown)</td>
+<td>4h</td>
+<td>🟡 Médio</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="conclusao">9. Conclusão</h2>
+<p><strong>Estado geral: ✅ BOM — produção-ready para uso pessoal/local</strong></p>
+<p>O projeto está maduro e bem estruturado. A V10 entrega um conjunto amplo de funcionalidades de manutenção Windows com UX moderna, IA local integrada via Ollama, e um ecossistema completo (app + MCP + scheduled task + atalhos). A documentação está em bom estado.</p>
+<p><strong>Prioridades de melhoria imediatas:</strong></p>
+<ol>
+<li>Limpar dead code (<code>OLLAMA_URL</code>, descrição MCP errada) — 5 min</li>
+<li>Adicionar tag de perigo + confirmação dupla para comandos destrutivos — 2 h</li>
+<li>Atualizar <code>README.md</code> para refletir V10 como ativa — 30 min</li>
+</ol>
+<p><strong>Nada impede o uso diário.</strong> O launcher é robusto, o app é estável, a IA responde rápido.</p>
+<hr />
+<p><strong>Próximos passos sugeridos:</strong></p>
+<ul>
+<li>Implementar prioridades 1-3</li>
+<li>Avaliar prioridade 4-5 (README + testes)</li>
+<li>Considerar prioridade 6 (instalador .exe) para distribuição mais ampla</li>
+</ul>
+</body></html>

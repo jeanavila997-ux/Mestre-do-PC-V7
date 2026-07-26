@@ -1,6 +1,6 @@
 interface:
-  display_name: "Mestre Do PC V7"
-  short_description: "Repo-specific patterns and workflows for Mestre-do-PC-V7"
-  default_prompt: "Use the Mestre-do-PC-V7 repo skill to follow existing architecture, testing, and workflow conventions."
+  display_name: "Mestre do PC V10"
+  short_description: "V10, launcher PowerShell, MCP Node e Ollama"
+  default_prompt: "Use a skill do Mestre do PC V10 e preserve os limites de segurança do launcher elevado."
 policy:
   allow_implicit_invocation: true

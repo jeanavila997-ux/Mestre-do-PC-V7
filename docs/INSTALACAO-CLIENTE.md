@@ -105,7 +105,7 @@ cd MestreDoPC_V7_clone
 # Execute como Administrador (eleva sozinho via UAC)
 .\INSTALAR.bat
 ```
-O `INSTALAR.bat` chama `Iniciar-MestreDoPC.ps1` / `install.ps1` que faz:
+O `INSTALAR.bat` chama `install.ps1`, que faz:
 1. Verifica Node.js (instala via `winget` se faltar)
 2. `npm install` no `mcp-server/`
 3. Registra a **tarefa agendada** `MestreDoPC_Admin_Launcher` (launcher admin, AtLogon)
@@ -156,12 +156,11 @@ schtasks /Query /TN "MestreDoPC_Admin_Launcher" /FO LIST
 powershell -ExecutionPolicy Bypass -File .\MestreDoPC-Launcher.ps1
 ```
 
-### Método C — start-mestre.bat (clássico, abre V7)
+### Método C — start-mestre.bat (compatibilidade)
 ```cmd
 start-mestre.bat
 ```
-> Re-eleva para admin, verifica a tarefa, faz health-check e abre
-> `legado/MestreDoPC-Ultimate-v7.html`.
+> Encaminha para `v10\start-v10.bat`.
 
 ### Endpoints do launcher (porta 7777)
 | Endpoint | Função |
@@ -174,6 +173,9 @@ start-mestre.bat
 | `GET /mcp-status` | Status do MCP server |
 | `GET /ollama/tags` | Proxy Ollama (lista modelos) |
 | `POST /ollama/chat` | Proxy Ollama chat com **streaming** |
+
+Os endpoints `POST` exigem o cabeçalho local `X-Mestre-Client` e recusam origens
+externas. Não exponha a porta 7777 na rede.
 
 ---
 
@@ -212,17 +214,17 @@ npm start    # node index.js  (stdio, normalmente o Claude inicia)
 
 ### Método 1 — Atalho da Área de Trabalho (mais fácil)
 - **"Mestre do PC"** → abre a V10 (`v10\start-v10.bat`)
-- **"Mestre do PC V7"** → abre a V7 clássica (`start-mestre.bat`)
 
 ### Método 2 — start-v10.bat (sem UAC)
 ```cmd
 v10\start-v10.bat
 ```
-Faz: health-check em `/ping` → se offline, dispara a tarefa agendada → abre `v10/index.html`.
+Faz: health-check em `/ping` → se offline, dispara a tarefa agendada → abre
+`http://127.0.0.1:7777/`.
 
-### Método 3 — Abrir o HTML direto (launcher já precisa estar rodando)
+### Método 3 — Abrir a URL local
 ```cmd
-start v10\index.html
+start http://127.0.0.1:7777/
 ```
 
 ---
@@ -249,7 +251,7 @@ start v10\index.html
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `OLLAMA_ORIGINS` | `127.0.0.1,0.0.0.0` | Origens CORS permitidas. A V10 já usa proxy, mas para acesso browser direto: `setx OLLAMA_ORIGINS "*"` |
+| `OLLAMA_ORIGINS` | configuração do Ollama | Origens CORS permitidas. A V10 usa o proxy local; não configure `*` |
 | `OLLAMA_HOST` | `127.0.0.1:11434` | Bind address. Para expor na rede: `0.0.0.0:11434` |
 | `OLLAMA_MODELS` | `~/.ollama/models` | Local dos modelos. Mude se pouco espaço no C: → `setx OLLAMA_MODELS "D:\ollama-models"` |
 | `OLLAMA_KEEP_ALIVE` | `5m` | Tempo que o modelo fica em memória. `-1` = sempre carregado (resposta +rápida) |
@@ -272,7 +274,7 @@ ollama ps      # PROCESSOR: 100% GPU / 100% CPU / misto
 
 ### Pré-carregar modelo (resposta instantânea no primeiro chat)
 ```bash
-curl http://localhost:11434/api/chat -d '{"model":"qwen2.5-coder:1.5b","keep_alive":-1}'
+curl http://localhost:11434/api/chat -d '{"model":"qwen2.5-coder:1.5b","keep_alive":"10m"}'
 ```
 
 ## 9. Solução de problemas
@@ -285,7 +287,7 @@ curl http://localhost:11434/api/chat -d '{"model":"qwen2.5-coder:1.5b","keep_ali
 | IA não responde | Sem modelos | `ollama pull qwen2.5-coder:1.5b` |
 | Modelo cloud falha | Não fez login | `ollama signin` (ou use o modelo local padrão) |
 | `npm install` falha | Node ausente/desatualizado | instale Node 18+ via nodejs.org |
-| CORS ao abrir via file:// | (resolvido na V10) | o app já usa proxy pelo launcher (`/ollama/*`) |
+| App aberto por `file://` não executa | proteção de origem ativa | abra pelo atalho ou por `http://127.0.0.1:7777/` |
 | Pouco espaço p/ modelos | — | `setx OLLAMA_MODELS "D:\ollama-models"` + reiniciar Ollama |
 
 ---

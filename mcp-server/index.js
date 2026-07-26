@@ -17,22 +17,17 @@ import {
   McpError,
 
 } from "@modelcontextprotocol/sdk/types.js";
+import { sanitizeToolArgument } from "./security.js";
 
 
 
 // Endpoint do Mestre do PC (MestreDoPC-Launcher.ps1)
 
-const MESTRE_BASE_URL = "http://localhost:7777";
+const MESTRE_BASE_URL = (process.env.MESTRE_BASE_URL || "http://127.0.0.1:7777").replace(/\/+$/, "");
 
 const MESTRE_RUN_URL = MESTRE_BASE_URL + "/run";
 
 const MESTRE_STATUS_URL = MESTRE_BASE_URL + "/run-status";
-
-
-
-// Caminho do projeto (para git commands) — pode ser sobrescrito via env var
-
-const PROJETO_PATH = (process.env.MESTRE_PROJETO_PATH || "C:\\MestreDoPC_V7").replace(/\\/g, "\\\\");
 
 
 
@@ -46,7 +41,10 @@ async function executeLauncherCommand(command, options = {}) {
 
     method: "POST",
 
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Mestre-Client": "mcp",
+    },
 
     body: JSON.stringify({ cmd: command }),
 
@@ -158,11 +156,11 @@ const server = new Server(
 
 // Mapeamento das ferramentas do MCP para comandos do Mestre do PC
 
-// Os comandos foram retirados do HTML oficial do Mestre do PC V7
+// Os comandos foram consolidados a partir do catalogo do Mestre do PC.
 
 // Mapeamento das ferramentas do MCP para comandos do Mestre do PC
 
-// Os comandos foram retirados do HTML oficial do Mestre do PC V7
+// O launcher V10 aplica a barreira administrativa e executa estes comandos.
 
 const mestreTools = {
 
@@ -382,7 +380,7 @@ const mestreTools = {
 
 
 
-    get command() { return `$project="${PROJETO_PATH}"; $logDir=Join-Path $project "logs"; New-Item -ItemType Directory -Force -Path $logDir | Out-Null; $file=Join-Path $logDir ("diagnostico-"+(Get-Date -Format "yyyyMMdd-HHmmss")+".txt"); $os=Get-WmiObject Win32_OperatingSystem; $disk=Get-PSDrive C; $top=Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name,@{N="RAM(MB)";E={[math]::Round($_.WorkingSet64/1MB,2)}} | Out-String; @("===== DIAGNOSTICO MESTRE DO PC =====","Data: $(Get-Date)","Computador: $env:COMPUTERNAME","Windows: $($os.Caption) Build $($os.BuildNumber)","RAM livre GB: $([math]::Round($os.FreePhysicalMemory/1MB,2))","Disco C livre GB: $([math]::Round($disk.Free/1GB,2))","",$top) | Set-Content -Path $file -Encoding UTF8; Write-Host "Diagnostico salvo em: $file" -ForegroundColor Green`; },
+    command: `$project=$env:MESTRE_PROJETO_PATH; $logDir=Join-Path $project "logs"; New-Item -ItemType Directory -Force -Path $logDir | Out-Null; $file=Join-Path $logDir ("diagnostico-"+(Get-Date -Format "yyyyMMdd-HHmmss")+".txt"); $os=Get-WmiObject Win32_OperatingSystem; $disk=Get-PSDrive C; $top=Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name,@{N="RAM(MB)";E={[math]::Round($_.WorkingSet64/1MB,2)}} | Out-String; @("===== DIAGNOSTICO MESTRE DO PC =====","Data: $(Get-Date)","Computador: $env:COMPUTERNAME","Windows: $($os.Caption) Build $($os.BuildNumber)","RAM livre GB: $([math]::Round($os.FreePhysicalMemory/1MB,2))","Disco C livre GB: $([math]::Round($disk.Free/1GB,2))","",$top) | Set-Content -Path $file -Encoding UTF8; Write-Host "Diagnostico salvo em: $file" -ForegroundColor Green`,
 
 
 
@@ -430,7 +428,7 @@ const mestreTools = {
 
 
 
-    get command() { return `$project="${PROJETO_PATH}"; $logDir=Join-Path $project "logs"; New-Item -ItemType Directory -Force -Path $logDir | Out-Null; Start-Process $logDir; Write-Host "Pasta de logs aberta: $logDir" -ForegroundColor Green`; },
+    command: `$project=$env:MESTRE_PROJETO_PATH; $logDir=Join-Path $project "logs"; New-Item -ItemType Directory -Force -Path $logDir | Out-Null; Start-Process $logDir; Write-Host "Pasta de logs aberta: $logDir" -ForegroundColor Green`,
 
 
 
@@ -460,7 +458,7 @@ const mestreTools = {
 
     description: "Executa 'git status' na pasta do projeto.",
 
-    get command() { return `Set-Location "${PROJETO_PATH}"; git status`; },
+    command: `Set-Location -LiteralPath $env:MESTRE_PROJETO_PATH; git status`,
 
   },
 
@@ -468,7 +466,7 @@ const mestreTools = {
 
     description: "Executa 'git pull' na pasta do projeto.",
 
-    get command() { return `Set-Location "${PROJETO_PATH}"; git pull; Write-Host "\u2705 Repositório atualizado!" -ForegroundColor Green`; },
+    command: `Set-Location -LiteralPath $env:MESTRE_PROJETO_PATH; git pull; Write-Host "\u2705 Repositório atualizado!" -ForegroundColor Green`,
 
   },
 
@@ -498,9 +496,9 @@ const mestreTools = {
 
 // Configuração do Ollama (IA Local)
 
-const OLLAMA_URL = "http://localhost:11434";
+const OLLAMA_URL = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/+$/, "");
 
-const OLLAMA_MODEL = "qwen2.5-coder:1.5b";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:1.5b";
 
 const OLLAMA_SYSTEM_PROMPT = `Você é o Mestre do PC, um assistente especializado em manutenção de computadores Windows.
 
@@ -660,7 +658,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       const data = await res.json();
 
-      const hasModel = data.models?.some(m => m.name.includes(OLLAMA_MODEL));
+      const hasModel = data.models?.some(m => (m.name || m.model) === OLLAMA_MODEL);
 
       
 
@@ -672,7 +670,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         // Tenta disparar o pull (pode demorar, retornaremos aviso)
 
-        fetch(OLLAMA_URL + "/api/pull", { 
+        void fetch(OLLAMA_URL + "/api/pull", {
 
           method: "POST", 
 
@@ -824,9 +822,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         // Allowlist: apenas caracteres válidos para nomes de processo/serviço Windows.
         // Bloqueia $(), backtick, ;, |, &, {}, [] e qualquer outro metacaractere PS.
-        const sanitizedValue = String(value).replace(/[^a-zA-Z0-9\-_. ]/g, "");
+        const sanitizedValue = sanitizeToolArgument(value);
 
-        if (sanitizedValue.trim().length === 0) {
+        if (sanitizedValue == null) {
           return {
             isError: true,
             content: [{ type: "text", text: `Argumento inválido para o parâmetro: ${key}` }],
@@ -893,7 +891,7 @@ async function startServer() {
 
   await server.connect(transport);
 
-  console.error("Mestre do PC V7 MCP Server iniciado em stdio.");
+  console.error("Mestre do PC V10 MCP Server iniciado em stdio.");
 
 }
 

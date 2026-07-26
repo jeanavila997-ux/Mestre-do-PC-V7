@@ -11,37 +11,62 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.MPC_PORT ? Number(process.env.MPC_PORT) : 7777;
+const PORT = Number(process.env.MPC_PORT || process.env.PORT) || 7777;
 const HOST = process.env.MPC_HOST || "127.0.0.1";
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
+const BASE_URL = `http://${HOST}:${PORT}`;
+const PROJECT_DIR = join(__dirname, "..");
+const MAX_CONCURRENT_JOBS = 3;
+const JOB_TIMEOUT_MS = 15 * 60 * 1000;
+const JOB_RETENTION_MS = 30 * 60 * 1000;
 
 const jobs = new Map();
 
 function cors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", BASE_URL);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Mestre-Client");
+  res.setHeader("Vary", "Origin");
+}
+
+function isAuthorized(req) {
+  const origin = req.headers.origin || "";
+  const client = req.headers["x-mestre-client"] || "";
+  return (
+    (origin === BASE_URL && client === "v10-web") ||
+    (!origin && client === "mcp")
+  );
 }
 
 function sendJson(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": BASE_URL,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Mestre-Client",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
   });
   res.end(body);
 }
 
-function readBody(req) {
-  return new Promise((resolve) => {
+function readBody(req, maxBytes = 2 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
     let buf = "";
-    req.on("data", (c) => (buf += c));
+    req.on("data", (c) => {
+      buf += c;
+      if (Buffer.byteLength(buf, "utf8") > maxBytes) {
+        reject(new Error("Corpo da requisição excede o limite permitido."));
+        req.destroy();
+      }
+    });
     req.on("end", () => {
       try { resolve(JSON.parse(buf || "{}")); }
-      catch { resolve({}); }
+      catch { reject(new Error("JSON inválido.")); }
     });
+    req.on("error", reject);
   });
 }
 
@@ -52,16 +77,31 @@ function runPowerShell(cmd) {
   jobs.set(id, job);
   const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd], {
     windowsHide: true,
+    env: { ...process.env, MESTRE_PROJETO_PATH: PROJECT_DIR },
   });
+  const timeout = setTimeout(() => {
+    if (job.state === "running") {
+      ps.kill();
+      job.state = "timed_out";
+      job.exitCode = -1;
+      job.success = false;
+      job.output += "\n[ERRO] Timeout após 15 minutos.";
+      job.completedAt = Date.now();
+    }
+  }, JOB_TIMEOUT_MS);
+  timeout.unref();
   ps.stdout.on("data", (d) => (job.output += d.toString()));
   ps.stderr.on("data", (d) => (job.output += d.toString()));
   ps.on("close", (code) => {
+    clearTimeout(timeout);
+    if (job.state === "timed_out") return;
     job.state = "completed";
     job.exitCode = code;
     job.success = code === 0;
     job.completedAt = Date.now();
   });
   ps.on("error", (e) => {
+    clearTimeout(timeout);
     job.state = "completed";
     job.success = false;
     job.output += `\n[ERRO] ${e.message}`;
@@ -89,8 +129,9 @@ async function proxyOllamaStream(path, req, res) {
   }
   res.writeHead(upstream.status, {
     "Content-Type": "application/x-ndjson; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": BASE_URL,
     "Cache-Control": "no-cache",
+    "X-Content-Type-Options": "nosniff",
   });
   const reader = upstream.body.getReader();
   try {
@@ -147,14 +188,19 @@ $uptime = [int]((Get-Date) - $boot).TotalSeconds
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}`);
   const path = url.pathname;
-  if (req.method === "OPTIONS") { cors(res); res.writeHead(204); return res.end(); }
+  if (req.method === "OPTIONS") {
+    if (req.headers.origin !== BASE_URL) return sendJson(res, 403, { error: "Origem não autorizada." });
+    cors(res);
+    res.writeHead(204);
+    return res.end();
+  }
 
   try {
     if (path === "/ping") {
       const activeJobs = [...jobs.values()].filter((j) => j.state === "running").length;
       return sendJson(res, 200, {
         status: "ok",
-        admin: true,
+        admin: false,
         state: activeJobs > 0 ? "busy" : "idle",
         activeJobs,
         version: "10.0.0",
@@ -163,7 +209,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/mcp-status") {
-      return sendJson(res, 200, { status: "online", version: "10.0.0" });
+      return sendJson(res, 200, { status: "unknown", version: "10.0.0" });
     }
 
     if (path === "/status") {
@@ -171,6 +217,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/run" && req.method === "POST") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado.", state: "forbidden" });
+      const activeJobs = [...jobs.values()].filter((j) => j.state === "running").length;
+      if (activeJobs >= MAX_CONCURRENT_JOBS) return sendJson(res, 429, { success: false, output: "Limite de comandos simultâneos atingido.", state: "busy" });
       const body = await readBody(req);
       if (!body.cmd) return sendJson(res, 400, { success: false, output: "Missing 'cmd'" });
       const id = runPowerShell(body.cmd);
@@ -194,20 +243,33 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/open-terminal" && req.method === "POST") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { success: false, output: "Cliente não autorizado." });
       spawn("powershell.exe", ["-NoLogo", "-NoExit", "-Command", "Set-Location '" + __dirname.replace(/'/g, "''") + "'"], { windowsHide: false, detached: true, stdio: "ignore" }).unref();
       return sendJson(res, 200, { success: true, output: "Terminal aberto." });
     }
 
     // Proxy Ollama
     if (path === "/ollama/tags") return proxyOllamaJson("/api/tags", res);
-    if (path === "/ollama/chat" && req.method === "POST") return proxyOllamaStream("/api/chat", req, res);
-    if (path === "/ollama/pull" && req.method === "POST") return proxyOllamaStream("/api/pull", req, res);
+    if (path === "/ollama/chat" && req.method === "POST") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { error: "Cliente não autorizado." });
+      return proxyOllamaStream("/api/chat", req, res);
+    }
+    if (path === "/ollama/pull" && req.method === "POST") {
+      if (!isAuthorized(req)) return sendJson(res, 403, { error: "Cliente não autorizado." });
+      return proxyOllamaStream("/api/pull", req, res);
+    }
 
     // Servir frontend estático
     if (path === "/" || path === "/index.html") {
       try {
         const html = await readFile(join(__dirname, "index.html"), "utf8");
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "no-referrer",
+          "Cache-Control": "no-store",
+        });
         return res.end(html);
       } catch { return sendJson(res, 404, { error: "index.html não encontrado" }); }
     }
@@ -230,3 +292,11 @@ server.listen(PORT, HOST, () => {
   console.log(`Ollama proxy -> ${OLLAMA_URL}`);
   console.log(`Dashboard /status | Streaming /ollama/chat`);
 });
+
+const cleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [id, job] of jobs) {
+    if (job.completedAt && now - job.completedAt >= JOB_RETENTION_MS) jobs.delete(id);
+  }
+}, 60_000);
+cleanupTimer.unref();

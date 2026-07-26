@@ -2,11 +2,11 @@
     "name": "mcp-server",
     "version": "1.0.0",
     "type": "module",
-    "description": "Servidor MCP do Mestre do PC V7 — Permite que IAs executem comandos de manutenção no PC.",
+    "description": "Servidor MCP do Mestre do PC V10 para diagnóstico, manutenção e Ollama local.",
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "node --test"
     },
     "keywords": [
         "mcp",
@@ -16,6 +16,15 @@
     "author": "Jeanc",
     "license": "ISC",
     "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.27.1"
+        "@modelcontextprotocol/sdk": "^1.29.0"
+    },
+    "overrides": {
+        "@hono/node-server": "1.19.15",
+        "body-parser": "2.3.0",
+        "fast-uri": "3.1.4",
+        "hono": "4.12.32",
+        "ip-address": "10.3.1",
+        "path-to-regexp": "8.4.2",
+        "qs": "6.15.3"
     }
 }
