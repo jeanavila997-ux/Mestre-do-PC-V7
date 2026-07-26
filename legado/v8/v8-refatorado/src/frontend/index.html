@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mestre do PC V8</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+<div id="app">
+    <header>
+        <h1>Mestre do PC <span class="version">V8</span></h1>
+        <div class="status-bar">
+            <span id="server-status" class="badge offline">Offline</span>
+            <span id="job-count" class="badge">Jobs: 0</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="painel-status" class="card">
+            <h2>Status do Sistema</h2>
+            <div class="grid-4">
+                <div class="stat"><label>CPU</label><span id="cpu-val">--</span></div>
+                <div class="stat"><label>RAM Usada</label><span id="ram-val">--</span></div>
+                <div class="stat"><label>Disco C:</label><span id="disk-val">--</span></div>
+                <div class="stat"><label>Uptime</label><span id="uptime-val">--</span></div>
+            </div>
+            <button id="btn-refresh-status" class="btn primary">Atualizar</button>
+        </section>
+
+        <section id="painel-comando" class="card">
+            <h2>Executar Comando</h2>
+            <div class="input-group">
+                <select id="cmd-preset">
+                    <option value="">-- Comando rapido --</option>
+                    <option value="Get-Process | Select-Object -First 10 Name, CPU">Top Processos</option>
+                    <option value="Get-Service | Where-Object {$_.Status -eq 'Running'} | Select-Object -First 10 Name">Servicos Ativos</option>
+                    <option value="ipconfig /all">IP Config</option>
+                    <option value="sfc /verifyonly">Verificar SFC</option>
+                </select>
+                <textarea id="cmd-input" rows="3" placeholder="Digite um comando PowerShell seguro..."></textarea>
+            </div>
+            <div class="actions">
+                <button id="btn-executar" class="btn primary">Executar</button>
+                <button id="btn-limpar" class="btn secondary">Limpar</button>
+            </div>
+            <div id="cmd-result" class="result-box hidden"></div>
+        </section>
+
+        <section id="painel-jobs" class="card">
+            <h2>Jobs em Execucao</h2>
+            <div id="jobs-list" class="jobs-list">
+                <p class="empty">Nenhum job ativo.</p>
+            </div>
+            <button id="btn-limpar-jobs" class="btn secondary">Limpar Completados</button>
+        </section>
+    </main>
+
+    <footer>
+        <p>Mestre do PC V8 — Sistema de Manutencao Windows</p>
+    </footer>
+</div>
+
+<script src="static/js/app.js"></script>
+</body>
+</html>

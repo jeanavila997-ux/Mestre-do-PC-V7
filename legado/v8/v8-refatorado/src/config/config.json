@@ -1,0 +1,44 @@
+{
+    "port": 18791,
+    "host": "127.0.0.1",
+    "useHttps": false,
+    "jobTimeoutMs": 900000,
+    "jobRetentionMinutes": 30,
+    "maxConcurrentJobs": 5,
+    "rateLimitPerMinute": 30,
+    "allowedOrigins": [
+        "http://localhost",
+        "http://127.0.0.1",
+        "file://"
+    ],
+    "logLevel": "INFO",
+    "logRetentionDays": 30,
+    "mcp": {
+        "enabled": true,
+        "projectPath": "C:\\Users\\Jeanc\\MestreDoPC_V7"
+    },
+    "ollama": {
+        "url": "http://localhost:11434",
+        "model": "qwen3.5:cloud",
+        "timeoutMs": 15000,
+        "fallbackEnabled": true
+    },
+    "apiAuth": {
+        "enabled": false,
+        "tokens": []
+    },
+    "security": {
+        "requireApiToken": false,
+        "sanitizeInputs": true,
+        "commandAllowlist": true,
+        "enableCors": true,
+        "executionPolicy": "RemoteSigned"
+    },
+    "features": {
+        "darkMode": true,
+        "mcpIntegration": true,
+        "ollamaAI": true,
+        "electronApp": false,
+        "autoUpdate": false
+    }
+}

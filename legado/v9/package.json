@@ -1,0 +1,9 @@
+{
+  "name": "mestre-do-pc-v9",
+  "version": "9.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node launcher.js"
+  }
+}
