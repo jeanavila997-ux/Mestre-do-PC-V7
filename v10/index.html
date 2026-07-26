@@ -1115,19 +1115,21 @@
       async function activateLauncher() {
         const btn = document.getElementById("launcherActivateBtn");
         if (btn.dataset.activating === "true") return;
+        if (!serverOnline) { showToast("❌ Launcher offline. Não é possível ativar remotamente pelo navegador. Execute o atalho Mestre do PC.", "#f85149"); return; }
         if (!confirm("Ativar o Launcher requer privilégios administrativos.\n\nDeseja continuar?")) return;
         btn.dataset.activating = "true";
         btn.disabled = true;
         btn.textContent = "⏳ Ativando...";
         try {
+          const cmd = "schtasks /Run /TN 'MestreDoPC_Admin_Launcher'";
+          const b64 = btoa(cmd);
           const code = `
+            \$bytes = [Convert]::FromBase64String("${b64}")
+            \$command = [Text.Encoding]::UTF8.GetString(\$bytes)
             \$task = "MestreDoPC_Admin_Launcher"
             \$taskExists = Get-ScheduledTask -TaskName \$task -ErrorAction SilentlyContinue
-            if (-not \$taskExists) {
-              Write-Error "Tarefa agendada '\$task' não encontrada. Execute INSTALAR.bat como Administrador."
-              exit 1
-            }
-            Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command ""schtasks /Run /TN '\$task'""" -WindowStyle Hidden
+            if (-not \$taskExists) { Write-Error "Tarefa agendada '\$task' não encontrada. Execute INSTALAR.bat como Administrador."; exit 1 }
+            Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand",([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(\$command))) -WindowStyle Hidden
             for (\$i = 0; \$i -lt 30; \$i++) {
               Start-Sleep -Seconds 1
               try { \$r = Invoke-RestMethod -Uri 'http://127.0.0.1:7777/ping' -TimeoutSec 2 -ErrorAction Stop; if (\$r.status -eq 'ok') { exit 0 } } catch {}
@@ -1137,7 +1139,7 @@
           const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
           const data = await res.json();
           if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar launcher");
-          await pollJobUntilDone(data.jobId, (out) => { /* output silencioso */ });
+          await livePollJob(data.jobId, (s) => { });
           showToast("✅ Launcher ativado", "var(--accent2)");
         } catch (err) {
           showToast("❌ Não foi possível ativar o launcher: " + err.message, "#f85149");
@@ -1152,7 +1154,8 @@
       async function activateMCP() {
         const btn = document.getElementById("mcpActivateBtn");
         if (btn.dataset.activating === "true") return;
-        if (!confirm("Ativar o MCP executará o servidor em modo administrador.\n\nDeseja continuar?")) return;
+        if (!serverOnline) { showToast("❌ Launcher offline. Ative o Launcher primeiro.", "#f85149"); return; }
+        if (!confirm("Ativar o MCP executará o servidor do assistente de IA.\n\nDeseja continuar?")) return;
         btn.dataset.activating = "true";
         btn.disabled = true;
         btn.textContent = "⏳ Ativando...";
@@ -1160,18 +1163,19 @@
           const code = `
             \$base = \$env:MESTRE_PROJETO_PATH
             if (-not \$base) { Write-Error "MESTRE_PROJETO_PATH não definido."; exit 1 }
-            \$mcpPath = Join-Path \$base "mcp-server\index.js"
+            \$mcpDir = Join-Path \$base "mcp-server"
+            \$mcpPath = Join-Path \$mcpDir "index.js"
             if (-not (Test-Path \$mcpPath)) { Write-Error "MCP não encontrado em: \$mcpPath"; exit 1 }
             \$node = Get-Command node.exe -ErrorAction SilentlyContinue
             if (-not \$node) { Write-Error "Node.js não encontrado no PATH."; exit 1 }
-            Start-Process \$node.Source -Verb RunAs -ArgumentList "\`"\$mcpPath\`"" -WindowStyle Hidden -WorkingDirectory (Join-Path \$base "mcp-server")
+            Start-Process \$node.Source -ArgumentList "\`"\$mcpPath\`"" -WindowStyle Hidden -WorkingDirectory \$mcpDir
             Start-Sleep -Seconds 3
             exit 0
           `;
           const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
           const data = await res.json();
           if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar MCP");
-          await pollJobUntilDone(data.jobId, (out) => { });
+          await livePollJob(data.jobId, (s) => { });
           showToast("✅ MCP ativado", "var(--accent2)");
         } catch (err) {
           showToast("❌ Não foi possível ativar o MCP: " + err.message, "#f85149");
@@ -1186,7 +1190,8 @@
       async function activateOllama() {
         const btn = document.getElementById("ollamaActivateBtn");
         if (btn.dataset.activating === "true") return;
-        if (!confirm("Ativar o Ollama executará o servidor em modo administrador.\n\nDeseja continuar?")) return;
+        if (!serverOnline) { showToast("❌ Launcher offline. Ative o Launcher primeiro.", "#f85149"); return; }
+        if (!confirm("Ativar o Ollama executará o servidor de IA local.\n\nDeseja continuar?")) return;
         btn.dataset.activating = "true";
         btn.disabled = true;
         btn.textContent = "⏳ Ativando...";
@@ -1194,7 +1199,7 @@
           const code = `
             \$ollama = Get-Command ollama -ErrorAction SilentlyContinue
             if (-not \$ollama) { Write-Error "Comando 'ollama' não encontrado no PATH. Instale o Ollama primeiro."; exit 1 }
-            Start-Process \$ollama.Source -Verb RunAs -ArgumentList "serve" -WindowStyle Hidden
+            Start-Process \$ollama.Source -ArgumentList "serve" -WindowStyle Hidden
             Start-Sleep -Seconds 4
             for (\$i = 0; \$i -lt 20; \$i++) {
               try { \$r = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 2 -ErrorAction Stop; if (\$r.models -ne \$null) { exit 0 } } catch {}
@@ -1205,7 +1210,7 @@
           const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
           const data = await res.json();
           if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar Ollama");
-          await pollJobUntilDone(data.jobId, (out) => { });
+          await livePollJob(data.jobId, (s) => { });
           showToast("✅ Ollama ativado", "var(--accent2)");
         } catch (err) {
           showToast("❌ Não foi possível ativar o Ollama: " + err.message, "#f85149");

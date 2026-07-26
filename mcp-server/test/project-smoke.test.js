@@ -80,4 +80,13 @@ test("V10 expõe botões de ativação para Launcher, MCP e Ollama", async () =>
 
   // Deve usar o launcher elevado para executar os comandos de ativação
   assert.match(html, /fetch\(API \+ "\/run"/);
+
+  // Deve validar se o launcher está online antes de tentar ativar
+  assert.match(html, /if \(!serverOnline\) \{ showToast\("❌ Launcher offline/);
+
+  // MCP não deve ser elevado (preserva separação de privilégios)
+  assert.doesNotMatch(html, /Start-Process \$node\.Source -Verb RunAs/);
+
+  // Ollama não precisa de UAC
+  assert.doesNotMatch(html, /Start-Process \$ollama\.Source -Verb RunAs/);
 });
