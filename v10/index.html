@@ -252,6 +252,22 @@
       .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.82rem; transition: 0.2s; }
       .btn-copy { background: var(--success); color: white; }
       .btn-run { background: var(--danger); color: white; }
+      /* NOVO V10 revisao: aviso visual em comandos destrutivos */
+      .cmd-card.danger { border-color: var(--danger); }
+      .cmd-card.danger:hover { border-color: var(--danger); box-shadow: 0 0 12px rgba(248,81,73,0.35); }
+      .danger-badge {
+        display: inline-block;
+        margin-left: 8px;
+        margin-bottom: 7px;
+        padding: 2px 8px;
+        background: rgba(248,81,73,0.15);
+        color: var(--danger);
+        border: 1px solid rgba(248,81,73,0.4);
+        border-radius: 12px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
       .btn-queue-add { background: var(--purple); color: white; }
       .btn-live { background: var(--accent); color: #000; }
       .btn:hover { transform: scale(1.06); opacity: 0.9; }
@@ -752,8 +768,11 @@
           const esc = cmd[1].replace(/</g, "&lt;").replace(/>/g, "&gt;");
           const isFav = favorites.includes(uid) ? "active" : "";
           const star = isFav ? "⭐" : "☆";
-          cards += `<div class="cmd-card">
+          const danger = isDangerous(cmd[1]);
+          const dangerBadge = danger ? `<span class="danger-badge" title="Comando destrutivo — use com cuidado">⚠️ destrutivo</span>` : "";
+          cards += `<div class="cmd-card ${danger ? "danger" : ""}">
       <span class="fav-star ${isFav}" onclick="toggleFavorite('${uid}', this)">${star}</span>
+      ${dangerBadge}
       <h4>${cmd[0]}</h4>
       <code id="${uid}">${esc}</code>
       <div class="btn-row">
@@ -1081,13 +1100,36 @@
         } catch (err) { showToast("❌ " + err.message, "#f85149"); }
       }
       // ===== INTEGRAÇÃO OLLAMA (padrão V7) =====
-      const OLLAMA_URL = "http://localhost:11434";
+      // V10 usa SEMPRE o proxy do launcher (resolve CORS do file://).
+      // O Ollama nativo continua rodando em localhost:11434, mas o browser
+      // NUNCA fala direto com ele — sempre passa por /ollama/* no launcher.
       const OLLAMA_MODEL = "qwen2.5-coder:1.5b";
       // Modelo LOCAL como padrão (funciona sem login Ollama Cloud).
       // Cloud models ficam como fallback (exigem `ollama signin`).
       const OLLAMA_MODEL_PREFERENCES = ["qwen2.5-coder:1.5b", "glm-5.2:cloud", "minimax-m3:cloud", "kimi-k2.5:cloud", "gemma4:cloud", "glm-5.1:cloud"];
       let selectedOllamaModel = OLLAMA_MODEL;
       function chooseOllamaModel(models) { return OLLAMA_MODEL_PREFERENCES.find((m) => models.includes(m)) || models.find((m) => m.toLowerCase().includes("qwen")) || models[0] || OLLAMA_MODEL; }
+
+      // NOVO V10 revisao: detecta comandos realmente destrutivos para mostrar badge ⚠️
+      // Apenas comandos que afetam o sistema de forma persistente ou irrecuperável.
+      // (Limpezas de TEMP/cache são normais e não geram badge.)
+      const DANGER_PATTERNS = [
+        /cipher\s+\/w:/i,                         // secure wipe (irrecuperável)
+        /format\s+[a-z]:/i,                       // formatação de unidade
+        /diskpart/i,                              // particionamento direto
+        /DISM[\s\S]*\/ResetBase/i,                // ResetBase do WinSxS (irreversível)
+        /netsh\s+int\s+ip\s+reset/i,              // reset pilha TCP/IP (requer reboot)
+        /netsh\s+winsock\s+reset/i,               // reset Winsock (requer reboot)
+        /bootrec\s+\/(fixmbr|fixboot|rebuildbcd)/i, // alteração de boot
+        /powercfg\s+-h\s+off/i,                   // desativa hibernação + remove hiberfil.sys
+        /Set-Service[\s\S]*-StartupType\s+Disabled/i, // desativa serviço na inicialização
+        /Stop-Service[\s\S]*-Force/i,             // para serviço forçadamente
+        /bcdedit/i,                               // edição manual do boot config
+        /Clear-RecycleBin[\s\S]*-Force/i,            // esvazia lixeira sem confirmação
+      ];
+      function isDangerous(cmd) {
+        return DANGER_PATTERNS.some((re) => re.test(cmd));
+      }
       const SYSTEM_PROMPT = `Você é o Mestre do PC V10, um assistente especializado em manutenção de computadores Windows.
 REGRAS:
 1. Responda SEMPRE em português brasileiro.

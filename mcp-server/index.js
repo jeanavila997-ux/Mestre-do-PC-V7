@@ -618,7 +618,7 @@ const TOOLS = [
 
     name: "verificar_modelo_ollama",
 
-    description: "Verifica se o modelo qwen2.5:1.5b está instalado no Ollama e tenta baixá-lo se necessário.",
+    description: "Verifica se o modelo qwen2.5-coder:1.5b está instalado no Ollama e tenta baixá-lo se necessário.",
 
     inputSchema: {
 
