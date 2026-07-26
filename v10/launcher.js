@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.MPC_PORT ? Number(process.env.MPC_PORT) : 7777;
+const PORT = Number(process.env.MPC_PORT || process.env.PORT) || 7777;
 const HOST = process.env.MPC_HOST || "127.0.0.1";
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
 const BASE_URL = `http://${HOST}:${PORT}`;
