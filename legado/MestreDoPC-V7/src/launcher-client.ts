@@ -149,9 +149,9 @@ export async function executeLauncherCommand(
       }
 
       const output = stdout.trim();
-      let result;
+      let result: unknown;
       try {
-        result = JSON.parse(output);
+        result = JSON.parse(output) as unknown;
       } catch {
         result = { saida: output, status: 'ok' };
       }
