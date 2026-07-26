@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mestre do PC V10 - Ultimate Plus</title>
-    <link rel="icon" type="image/png" sizes="512x512" href="../favicon.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="favicon.png" />
     <style>
       :root {
         --bg: #05070a;
@@ -159,6 +159,12 @@
       .status-container { display: flex; align-items: center; gap: 20px; width: 100%; flex-wrap: wrap; }
       .status-divider { border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px; }
       .btn-verify { margin-left: auto; padding: 5px 14px; background: rgba(0,212,255,0.15); border: 1px solid var(--accent); border-radius: 20px; color: var(--accent); cursor: pointer; font-size: 0.82rem; }
+      .btn-verify:hover { background: rgba(0,212,255,0.25); }
+      .btn-activate { padding: 5px 12px; background: rgba(0,255,136,0.12); border: 1px solid var(--accent2); border-radius: 20px; color: var(--accent2); cursor: pointer; font-size: 0.78rem; margin-left: 6px; transition: 0.2s; }
+      .btn-activate:hover { background: rgba(0,255,136,0.22); }
+      .btn-activate:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-activate.danger { background: rgba(248,81,73,0.12); border-color: var(--danger); color: var(--danger); }
+      .btn-activate.danger:hover { background: rgba(248,81,73,0.22); }
       /* ===== NOVO: barra de favoritos ===== */
       .favorites-bar {
         background: var(--panel);
@@ -277,11 +283,15 @@
         background: var(--accent2); color: #000; padding: 13px 30px; border-radius: 50px;
         font-weight: bold; box-shadow: 0 12px 30px rgba(0,255,136,0.45); z-index: 9999;
         display: none; align-items: center; gap: 8px; font-size: 0.95rem;
+        max-width: 90vw; word-break: break-word; white-space: pre-wrap; text-align: center;
       }
+      .toast.error { background: #f85149; color: #fff; }
+      .toast.info { background: var(--accent); color: #000; }
       /* ===== Modal IA (padrão V7) ===== */
       .ia-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 10000; display: none; justify-content: center; align-items: center; }
       .ia-overlay.open { display: flex; }
       .ia-modal { width: 700px; max-width: 95vw; height: 80vh; max-height: 700px; background: var(--panel); border: 1px solid rgba(0,212,255,0.3); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+      .ia-modal.drag-over { border-color: var(--accent2); box-shadow: 0 0 24px rgba(0,255,136,0.25); }
       .ia-header { padding: 14px 20px; background: linear-gradient(135deg, rgba(162,0,255,0.2), rgba(0,212,255,0.15)); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
       .ia-header h3 { color: var(--accent); font-size: 1rem; }
       .ia-header .ia-status { font-size: 0.75rem; color: #8b949e; }
@@ -298,10 +308,17 @@
       .ia-typing span:nth-child(2) { animation-delay: 0.2s; }
       .ia-typing span:nth-child(3) { animation-delay: 0.4s; }
       @keyframes iaTyping { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.3); } }
-      .ia-input-area { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: rgba(0,0,0,0.3); }
+      .ia-input-area { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: rgba(0,0,0,0.3); align-items: center; }
       .ia-input-area input { flex: 1; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 50px; color: var(--text); font-size: 0.9rem; outline: none; }
       .ia-input-area input:focus { border-color: var(--accent); }
       .ia-input-area button { padding: 10px 20px; background: linear-gradient(135deg, #a200ff, #00d4ff); border: none; border-radius: 50px; color: white; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+      .ia-input-area .btn-attach { padding: 10px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 50px; color: var(--text); cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+      .ia-input-area .btn-attach:hover { border-color: var(--accent2); color: var(--accent2); }
+      .ia-input-area .btn-attach.has-file { background: rgba(0,255,136,0.15); border-color: var(--accent2); color: var(--accent2); }
+      .ia-doc-context { display: none; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 20px; font-size: 0.75rem; color: var(--accent); max-width: 220px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .ia-doc-context.show { display: inline-flex; }
+      .ia-doc-context .clear-doc { cursor: pointer; color: var(--danger); font-weight: bold; margin-left: 4px; }
+      .ia-doc-context .clear-doc:hover { color: #ff6b6b; }
       /* ===== Modal parâmetro (padrão V7) ===== */
       .param-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 9000; justify-content: center; align-items: center; }
       .param-modal { background: var(--panel); border: 1px solid rgba(0,212,255,0.3); border-radius: 14px; padding: 28px 32px; width: 420px; max-width: 95vw; }
@@ -333,7 +350,7 @@
   </head>
   <body>
     <div class="sidebar">
-      <img src="../logo-mestre-v7-transparent.png" class="logo-img" alt="Mestre do PC V10" title="Voltar ao início" onclick="voltarInicio()" onerror="this.style.display='none'" />
+      <img src="logo-mestre-v7-transparent.png" class="logo-img" alt="Mestre do PC V10" title="Voltar ao início" onclick="voltarInicio()" onerror="this.style.display='none'" />
       <div id="nav"></div>
     </div>
     <div class="main">
@@ -355,9 +372,9 @@
       </div>
       <div class="info-bar" id="serverStatus">
         <div class="status-container">
-          <div id="launcherStatus"><span id="launcherStatusIcon">🔴</span> <span id="statusText">Launcher offline — <strong>Execute o atalho Mestre do PC</strong></span></div>
-          <div id="mcpStatus" class="status-divider"><span id="mcpStatusIcon">⚪</span> MCP: <span id="mcpStatusText">Indisponível</span></div>
-          <div id="ollamaStatus" class="status-divider"><span id="ollamaStatusIcon">⚪</span> Ollama: <span id="ollamaStatusText">Verificando...</span></div>
+          <div id="launcherStatus"><span id="launcherStatusIcon">🔴</span> <span id="statusText">Launcher offline — <strong>Execute o atalho Mestre do PC</strong></span> <button id="launcherActivateBtn" class="btn-activate" onclick="activateLauncher()" style="display:none">▶ Ativar Launcher</button></div>
+          <div id="mcpStatus" class="status-divider"><span id="mcpStatusIcon">⚪</span> MCP: <span id="mcpStatusText">Indisponível</span> <button id="mcpActivateBtn" class="btn-activate" onclick="activateMCP()" style="display:none">▶ Ativar MCP</button></div>
+          <div id="ollamaStatus" class="status-divider"><span id="ollamaStatusIcon">⚪</span> Ollama: <span id="ollamaStatusText">Verificando...</span> <button id="ollamaActivateBtn" class="btn-activate" onclick="activateOllama()" style="display:none">▶ Ativar Ollama</button></div>
           <button class="btn-verify" onclick="checkServer()">↻ Verificar</button>
         </div>
       </div>
@@ -425,6 +442,9 @@
           <div class="ia-msg ai">Olá! Sou o <strong>Mestre IA</strong>, seu assistente de manutenção do PC. 🖥️<br>Me diga o que está acontecendo e eu sugiro os melhores comandos para resolver!</div>
         </div>
         <div class="ia-input-area">
+          <input type="file" id="iaFileInput" accept=".txt,.md,.json,.log,.csv,.ps1,.js,.html,.css,.bat,.cmd,.xml,.yml,.yaml,.ini,.conf,.pdf" style="display:none" onchange="handleIAFileSelect(event)" />
+          <button class="btn-attach" id="iaAttachBtn" onclick="importDocumentToIA()" title="Importar documento para o contexto">📎 Anexar</button>
+          <span class="ia-doc-context" id="iaDocContext" title=""><span id="iaDocName"></span><span class="clear-doc" onclick="clearIADocument()" title="Remover documento">×</span></span>
           <input type="text" id="iaInput" placeholder="Digite sua mensagem..." autocomplete="off" />
           <button id="iaSendBtn" onclick="sendIA()">Enviar ➤</button>
         </div>
@@ -815,6 +835,7 @@
         container.appendChild(div);
       });
       function toggleCat(header) { header.parentElement.classList.toggle("active"); }
+      const isCloud = window.location.protocol.startsWith("http") && !["localhost","127.0.0.1"].includes(location.hostname);
       const API = window.location.protocol.startsWith("http")
         ? window.location.origin
         : "http://127.0.0.1:7777";
@@ -823,6 +844,14 @@
         "X-Mestre-Client": "v10-web",
       };
       let serverOnline = false;
+      if (isCloud) {
+        const banner = document.createElement("div");
+        banner.id = "cloudBanner";
+        banner.style.cssText = "background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,255,136,0.08));border:1px solid var(--accent);border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:12px;font-size:0.92rem;";
+        banner.innerHTML = '<span style="font-size:1.4rem">🌐</span><div><strong>Modo Online</strong> — Você está vendo a interface do Mestre do PC. Para executar comandos, <a href="https://github.com/jeanavila997-ux/Mestre-do-PC-V7#instala%C3%A7%C3%A3o" style="color:var(--accent);text-decoration:underline" target="_blank">instale e rode o app localmente</a>.</div>';
+        const mainArea = document.querySelector(".main");
+        if (mainArea) mainArea.insertBefore(banner, mainArea.children[1]);
+      }
       // ===== NOVO V10: voltarInicio() — clica na logo para voltar ao topo =====
       function voltarInicio() {
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -955,6 +984,7 @@
         const codeEl = document.getElementById(uid);
         if (!codeEl) return;
         const code = codeEl.innerText.trim();
+        if (isCloud) { showToast("🌐 Disponível apenas com o launcher local.", "var(--accent)"); return; }
         if (!serverOnline) { showToast("❌ Launcher offline. Execute o Launcher primeiro.", "#f85149"); return; }
         if (!confirmBeforeExecution(code, "live")) return;
         const title = codeEl.parentElement.querySelector("h4").textContent;
@@ -974,6 +1004,10 @@
       }
       // ===== NOVO V10: loadDashboard() — métricas em tempo real (inspirado V8/V9) =====
       async function loadDashboard() {
+        if (isCloud) {
+          ["mCpu","mRam","mDisk","mUp"].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = "--"; });
+          return;
+        }
         try {
           const r = await fetch(API + "/status", { signal: AbortSignal.timeout(3000) });
           if (!r.ok) return;
@@ -1041,10 +1075,40 @@
         t.style.color = color === "#f85149" ? "#fff" : "#000";
         t.style.display = "flex";
         clearTimeout(t._tid);
-        t._tid = setTimeout(() => (t.style.display = "none"), 2500);
+        t._tid = setTimeout(() => (t.style.display = "none"), 4500);
+      }
+
+      function logActivation(step, detail) {
+        const ts = new Date().toLocaleTimeString("pt-BR");
+        const line = `[${ts}] ${step}: ${detail}`;
+        let history = JSON.parse(localStorage.getItem("mestre_activation_log") || "[]");
+        history.unshift(line);
+        history = history.slice(0, 100);
+        localStorage.setItem("mestre_activation_log", JSON.stringify(history));
+        if (typeof console !== "undefined") console.log("[Mestre V10]", line);
+      }
+
+      function showActivationToast(msg, type = "info") {
+        const colors = { info: "var(--accent)", success: "var(--accent2)", error: "#f85149", warning: "#f0a800" };
+        showToast(msg, colors[type] || colors.info);
+        logActivation(type.toUpperCase(), msg);
       }
       // ===== checkServer() (padrão V7) + dashboard + MCP + Ollama =====
       async function checkServer() {
+        if (isCloud) {
+          serverOnline = false;
+          document.getElementById("serverStatus").style.background = "rgba(0,212,255,0.08)";
+          document.getElementById("launcherStatusIcon").textContent = "🌐";
+          document.getElementById("statusText").innerHTML = "🌐 Modo Online — <strong>Interface em modo visualização</strong>";
+          document.getElementById("launcherActivateBtn").style.display = "none";
+          document.getElementById("mcpStatusText").textContent = "Modo Online";
+          document.getElementById("mcpStatusIcon").textContent = "🌐";
+          document.getElementById("mcpActivateBtn").style.display = "none";
+          document.getElementById("ollamaStatusText").textContent = "Modo Online";
+          document.getElementById("ollamaStatusIcon").textContent = "🌐";
+          document.getElementById("ollamaActivateBtn").style.display = "none";
+          return;
+        }
         try {
           const r = await fetch(API + "/ping", { signal: AbortSignal.timeout(1500) });
           const d = await r.json();
@@ -1061,8 +1125,10 @@
           document.getElementById("serverStatus").style.background = "rgba(248,81,73,0.08)";
           document.getElementById("launcherStatusIcon").textContent = "🔴";
           document.getElementById("statusText").innerHTML = "Launcher offline — <strong>Execute o atalho Mestre do PC</strong>";
+          document.getElementById("launcherActivateBtn").style.display = "inline-block";
         }
         if (serverOnline) {
+          document.getElementById("launcherActivateBtn").style.display = "none";
           try {
             const r = await fetch(API + "/mcp-status", { signal: AbortSignal.timeout(3000) });
             const d = await r.json();
@@ -1070,19 +1136,171 @@
             el.textContent = d.status === "online" ? "Online" : "Desconectado";
             el.style.color = d.status === "online" ? "var(--accent2)" : "var(--danger)";
             document.getElementById("mcpStatusIcon").textContent = d.status === "online" ? "🟢" : "🔴";
-          } catch { document.getElementById("mcpStatusText").textContent = "Erro"; document.getElementById("mcpStatusIcon").textContent = "🔴"; }
-        } else { document.getElementById("mcpStatusText").textContent = "Indisponível"; document.getElementById("mcpStatusIcon").textContent = "⚪"; }
+            document.getElementById("mcpActivateBtn").style.display = d.status === "online" ? "none" : "inline-block";
+          } catch { document.getElementById("mcpStatusText").textContent = "Erro"; document.getElementById("mcpStatusIcon").textContent = "🔴"; document.getElementById("mcpActivateBtn").style.display = "inline-block"; }
+        } else { document.getElementById("mcpStatusText").textContent = "Indisponível"; document.getElementById("mcpStatusIcon").textContent = "⚪"; document.getElementById("mcpActivateBtn").style.display = "none"; }
         try {
           const ro = await fetch(API + "/ollama/tags", { signal: AbortSignal.timeout(3000) });
           const do_ = await ro.json();
           const models = (do_.models || []).map((m) => m.name || m.model);
           const ollamaEl = document.getElementById("ollamaStatusText");
+          document.getElementById("ollamaActivateBtn").style.display = "none";
           if (models.length > 0) { ollamaEl.textContent = "Online (" + (models.find((m) => m.includes("qwen")) || models[0]) + ")"; ollamaEl.style.color = "var(--accent2)"; document.getElementById("ollamaStatusIcon").textContent = "🟢"; }
-          else { ollamaEl.textContent = "Sem modelos"; ollamaEl.style.color = "#f0ad4e"; document.getElementById("ollamaStatusIcon").textContent = "🟡"; }
-        } catch { document.getElementById("ollamaStatusText").textContent = "Offline"; document.getElementById("ollamaStatusText").style.color = "var(--danger)"; document.getElementById("ollamaStatusIcon").textContent = "🔴"; }
+          else { ollamaEl.textContent = "Sem modelos"; ollamaEl.style.color = "#f0ad4e"; document.getElementById("ollamaStatusIcon").textContent = "🟡"; document.getElementById("ollamaActivateBtn").style.display = "inline-block"; }
+        } catch {
+          const ollamaEl = document.getElementById("ollamaStatusText");
+          ollamaEl.textContent = "Offline";
+          ollamaEl.style.color = "var(--danger)";
+          document.getElementById("ollamaStatusIcon").textContent = "🔴";
+          document.getElementById("ollamaActivateBtn").style.display = "inline-block";
+        }
         loadDashboard();
       }
       function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+      // ===== NOVO V10: botões de ativação do Launcher, MCP e Ollama =====
+      async function activateLauncher() {
+        const btn = document.getElementById("launcherActivateBtn");
+        logActivation("LAUNCHER", "Botão acionado");
+        if (btn.dataset.activating === "true") { logActivation("LAUNCHER", "Ignorado: já em ativação"); return; }
+        if (!serverOnline) {
+          const msg = "Launcher offline. Para ativar, execute o atalho 'Mestre do PC' na Área de Trabalho.";
+          showActivationToast(msg, "error");
+          return;
+        }
+        if (!confirm("Ativar o Launcher requer privilégios administrativos.\n\nDeseja continuar?")) { logActivation("LAUNCHER", "Cancelado pelo usuário"); return; }
+        btn.dataset.activating = "true";
+        btn.disabled = true;
+        btn.textContent = "⏳ Ativando...";
+        logActivation("LAUNCHER", "Iniciando tarefa agendada com UAC");
+        try {
+          const cmd = "schtasks /Run /TN 'MestreDoPC_Admin_Launcher'";
+          const b64 = btoa(cmd);
+          const code = `
+            \$bytes = [Convert]::FromBase64String("${b64}")
+            \$command = [Text.Encoding]::UTF8.GetString(\$bytes)
+            \$task = "MestreDoPC_Admin_Launcher"
+            \$taskExists = Get-ScheduledTask -TaskName \$task -ErrorAction SilentlyContinue
+            if (-not \$taskExists) { Write-Error "Tarefa agendada '\$task' não encontrada. Execute INSTALAR.bat como Administrador."; exit 1 }
+            Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand",([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(\$command))) -WindowStyle Hidden
+            for (\$i = 0; \$i -lt 30; \$i++) {
+              Start-Sleep -Seconds 1
+              try { \$r = Invoke-RestMethod -Uri 'http://127.0.0.1:7777/ping' -TimeoutSec 2 -ErrorAction Stop; if (\$r.status -eq 'ok') { exit 0 } } catch {}
+            }
+            exit 1
+          `;
+          logActivation("LAUNCHER", "Enviando comando para launcher");
+          const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
+          const data = await res.json();
+          logActivation("LAUNCHER", "Resposta do launcher: HTTP " + res.status + " accepted=" + data.accepted);
+          if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar launcher");
+          await livePollJob(data.jobId, (s) => { logActivation("LAUNCHER", "Estado=" + s.state + " | " + (s.output || "").split("\n")[0]); });
+          showActivationToast("✅ Launcher ativado", "success");
+        } catch (err) {
+          showActivationToast("❌ Não foi possível ativar o launcher: " + err.message, "error");
+          logActivation("LAUNCHER", "Erro: " + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.dataset.activating = "false";
+          btn.textContent = "▶ Ativar Launcher";
+          checkServer();
+        }
+      }
+
+      async function activateMCP() {
+        const btn = document.getElementById("mcpActivateBtn");
+        logActivation("MCP", "Botão acionado");
+        if (btn.dataset.activating === "true") { logActivation("MCP", "Ignorado: já em ativação"); return; }
+        if (!serverOnline) { showActivationToast("❌ Launcher offline. Ative o Launcher primeiro.", "error"); return; }
+        if (!confirm("Ativar o MCP executará o servidor do assistente de IA.\n\nDeseja continuar?")) { logActivation("MCP", "Cancelado pelo usuário"); return; }
+        btn.dataset.activating = "true";
+        btn.disabled = true;
+        btn.textContent = "⏳ Ativando...";
+        try {
+          const code = `
+            \$base = \$env:MESTRE_PROJETO_PATH
+            if (-not \$base) { Write-Error "MESTRE_PROJETO_PATH não definido."; exit 1 }
+            \$mcpDir = Join-Path \$base "mcp-server"
+            \$mcpPath = Join-Path \$mcpDir "index.js"
+            if (-not (Test-Path \$mcpPath)) { Write-Error "MCP não encontrado em: \$mcpPath"; exit 1 }
+            \$node = Get-Command node.exe -ErrorAction SilentlyContinue
+            if (-not \$node) { Write-Error "Node.js não encontrado no PATH."; exit 1 }
+            Write-Host "Iniciando MCP em: \$mcpPath"
+            Start-Process \$node.Source -ArgumentList "\`"\$mcpPath\`"" -WindowStyle Hidden -WorkingDirectory \$mcpDir
+            Start-Sleep -Seconds 3
+            exit 0
+          `;
+          logActivation("MCP", "Enviando comando para launcher");
+          const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
+          const data = await res.json();
+          logActivation("MCP", "Resposta do launcher: HTTP " + res.status + " accepted=" + data.accepted);
+          if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar MCP");
+          await livePollJob(data.jobId, (s) => { logActivation("MCP", "Estado=" + s.state + " | " + (s.output || "").split("\n")[0]); });
+          showActivationToast("✅ MCP ativado", "success");
+        } catch (err) {
+          showActivationToast("❌ Não foi possível ativar o MCP: " + err.message, "error");
+          logActivation("MCP", "Erro: " + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.dataset.activating = "false";
+          btn.textContent = "▶ Ativar MCP";
+          setTimeout(checkServer, 1500);
+        }
+      }
+
+      async function activateOllama() {
+        const btn = document.getElementById("ollamaActivateBtn");
+        logActivation("OLLAMA", "Botão acionado");
+        if (btn.dataset.activating === "true") { logActivation("OLLAMA", "Ignorado: já em ativação"); return; }
+        if (!serverOnline) { showActivationToast("❌ Launcher offline. Ative o Launcher primeiro.", "error"); return; }
+        if (!confirm("Ativar o Ollama executará o servidor de IA local.\n\nDeseja continuar?")) { logActivation("OLLAMA", "Cancelado pelo usuário"); return; }
+        btn.dataset.activating = "true";
+        btn.disabled = true;
+        btn.textContent = "⏳ Ativando...";
+        try {
+          const code = `
+            \$ollama = Get-Command ollama -ErrorAction SilentlyContinue
+            if (-not \$ollama) { Write-Error "Comando 'ollama' não encontrado no PATH. Instale o Ollama primeiro."; exit 1 }
+            Write-Host "Iniciando Ollama em: \$ollama.Source"
+            Start-Process \$ollama.Source -ArgumentList "serve" -WindowStyle Hidden
+            Start-Sleep -Seconds 4
+            for (\$i = 0; \$i -lt 20; \$i++) {
+              try { \$r = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 2 -ErrorAction Stop; if (\$r.models -ne \$null) { exit 0 } } catch {}
+              Start-Sleep -Seconds 1
+            }
+            exit 1
+          `;
+          logActivation("OLLAMA", "Enviando comando para launcher");
+          const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
+          const data = await res.json();
+          logActivation("OLLAMA", "Resposta do launcher: HTTP " + res.status + " accepted=" + data.accepted);
+          if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar Ollama");
+          await livePollJob(data.jobId, (s) => { logActivation("OLLAMA", "Estado=" + s.state + " | " + (s.output || "").split("\n")[0]); });
+          showActivationToast("✅ Ollama ativado", "success");
+        } catch (err) {
+          showActivationToast("❌ Não foi possível ativar o Ollama: " + err.message, "error");
+          logActivation("OLLAMA", "Erro: " + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.dataset.activating = "false";
+          btn.textContent = "▶ Ativar Ollama";
+          setTimeout(checkServer, 1500);
+        }
+      }
+
+      async function pollJobUntilDone(jobId, onOutput) {
+        while (true) {
+          const r = await fetch(API + "/run-status?jobId=" + encodeURIComponent(jobId), { signal: AbortSignal.timeout(5000) });
+          const d = await r.json();
+          if (d.output && onOutput) onOutput(d.output);
+          if (d.state === "completed" || d.state === "failed" || d.state === "timeout") {
+            if (d.state !== "completed") throw new Error(d.output || "Falha na execução");
+            return d.output;
+          }
+          await sleep(800);
+        }
+      }
+
       // ===== dispatchCommand() (padrão V7) =====
       async function dispatchCommand(code, options = {}) {
         const submitRes = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }), signal: AbortSignal.timeout(options.submitTimeoutMs || 10000) });
@@ -1122,6 +1340,7 @@
       }
       // ===== executeCmd() (padrão V7) + histórico =====
       async function executeCmd(code) {
+        if (isCloud) { showToast("🌐 Disponível apenas com o launcher local.", "var(--accent)"); return; }
         if (serverOnline === false) { try { await navigator.clipboard.writeText(code); } catch {} showToast("⚠️ Servidor offline. Comando copiado.", "#f0a800"); return; }
         if (!confirmBeforeExecution(code)) return;
         const panel = document.getElementById("outputPanel");
@@ -1187,6 +1406,169 @@ COMANDOS QUE VOCÊ CONHECE:
 - Drivers: Get-WmiObject Win32_PnPSignedDriver, pnputil
 - Privacidade: AllowTelemetry, AdvertisingInfo, Cortana`;
       let iaConversation = [];
+      let iaDocumentContext = null; // { name, content, size }
+      const IA_DOC_MAX_CHARS = 8000;
+
+      // ===== NOVO V10: importar documento para o contexto do chat IA =====
+      function importDocumentToIA() {
+        document.getElementById("iaFileInput").click();
+      }
+
+      function truncateText(text, max) {
+        if (!text || text.length <= max) return text;
+        return text.slice(0, max) + "\n\n[... documento truncado por limite de contexto ...]";
+      }
+
+      // Extrai texto simples de um ArrayBuffer de PDF (sem bibliotecas externas).
+      // PDFs de texto legível expõem streams de texto não comprimidos; fazemos busca
+      // por padrões comuns do formato e decodificamos bytes ASCII imprimíveis.
+      async function extractTextFromPDF(arrayBuffer) {
+        try {
+          const bytes = new Uint8Array(arrayBuffer);
+          // Padrão de strings em PDFs: (texto) ou <texto hexadecimal>
+          const text = [];
+          let inParenString = false;
+          let inHexString = false;
+          let hexBuffer = "";
+          let depth = 0;
+          for (let i = 0; i < bytes.length; i++) {
+            const c = bytes[i];
+            if (inParenString) {
+              if (c === 0x5C) { text.push(String.fromCharCode(bytes[i + 1] || 0x20)); i++; continue; }
+              if (c === 0x29) { inParenString = false; text.push(" "); continue; }
+              if (c >= 0x20 && c <= 0x7E) text.push(String.fromCharCode(c));
+            } else if (inHexString) {
+              const ch = String.fromCharCode(c).toUpperCase();
+              if (/[0-9A-F]/.test(ch)) { hexBuffer += ch; if (hexBuffer.length === 2) { const val = parseInt(hexBuffer, 16); if (val >= 0x20 && val <= 0x7E) text.push(String.fromCharCode(val)); hexBuffer = ""; } }
+              if (c === 0x3E) inHexString = false;
+            } else {
+              if (c === 0x28) { inParenString = true; depth = 0; }
+              else if (c === 0x3C) { inHexString = true; hexBuffer = ""; }
+              else if (c >= 0x20 && c <= 0x7E) text.push(String.fromCharCode(c));
+            }
+          }
+          let extracted = text.join("");
+          // Limpa lixo comum
+          extracted = extracted.replace(/(\/Type|\/Font|\/Encoding|\/DescendantFonts|\/ToUnicode|\/Widths|\/BaseFont|\/Subtype|\/Name|\/Length|\/Filter)[^\n]*/g, " ");
+          extracted = extracted.replace(/\s+/g, " ").trim();
+          return extracted.length > 50 ? extracted : null;
+        } catch { return null; }
+      }
+
+      async function handleIAFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        await processIAFile(file);
+        event.target.value = "";
+      }
+
+      function clearIADocument() {
+        iaDocumentContext = null;
+        updateIADocContextUI();
+        showToast("📄 Documento removido do contexto", "#f0a800");
+      }
+
+      function updateIADocContextUI() {
+        const badge = document.getElementById("iaDocContext");
+        const nameEl = document.getElementById("iaDocName");
+        const btn = document.getElementById("iaAttachBtn");
+        if (iaDocumentContext) {
+          nameEl.textContent = iaDocumentContext.name;
+          badge.title = "Documento anexado: " + iaDocumentContext.name + " (" + iaDocumentContext.content.length + " chars)";
+          badge.classList.add("show");
+          btn.classList.add("has-file");
+          btn.textContent = "📎 Trocar";
+        } else {
+          badge.classList.remove("show");
+          btn.classList.remove("has-file");
+          btn.textContent = "📎 Anexar";
+        }
+      }
+
+      function buildSystemPrompt() {
+        let prompt = SYSTEM_PROMPT;
+        if (iaDocumentContext) {
+          prompt += `\n\nDOCUMENTO ANEXADO ATUALMENTE ("${iaDocumentContext.name}"):\n---\n${iaDocumentContext.content}\n---\n\nREGRAS PARA O DOCUMENTO ANEXADO:\n- Analise o documento e use-o como contexto adicional quando relevante.\n- NUNCA invente informações que não estejam no documento.\n- Se o documento for um log de erros/eventos, identifique os problemas mais críticos e sugira comandos PowerShell reais do Windows para resolvê-los.\n- Se o documento for código, configuração ou script, revise-o e sugira melhorias, correções ou alertas de segurança.\n- Se a pergunta do usuário não se relacionar com o documento, ignore-o e responda normalmente.`;
+        }
+        return prompt;
+      }
+
+      function initIADragDrop() {
+        const modal = document.querySelector(".ia-modal");
+        if (!modal) return;
+
+        const dropTargets = [modal, document.getElementById("iaMessages")];
+        let dragCounter = 0;
+
+        for (const target of dropTargets) {
+          target.addEventListener("dragenter", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            modal.classList.add("drag-over");
+          });
+          target.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter <= 0) modal.classList.remove("drag-over");
+          });
+          target.addEventListener("dragover", (e) => { e.preventDefault(); e.stopPropagation(); });
+          target.addEventListener("drop", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            modal.classList.remove("drag-over");
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+              processIAFile(files[0]);
+            }
+          });
+        }
+      }
+
+      async function processIAFile(file) {
+        if (!file) return;
+
+        const isPDF = /\.pdf$/i.test(file.name);
+        const allowedText = /\.(txt|md|json|log|csv|ps1|js|html|css|bat|cmd|xml|yml|yaml|ini|conf)$/i;
+        if (!isPDF && !allowedText.test(file.name)) {
+          showToast("❌ Formato não suportado. Use arquivos de texto ou PDF.", "#f85149");
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          showToast("❌ Arquivo muito grande (máx. 5 MB).", "#f85149");
+          return;
+        }
+
+        try {
+          let text;
+          if (isPDF) {
+            showToast("📄 Extraindo texto do PDF...", "var(--accent)");
+            const buffer = await file.arrayBuffer();
+            text = await extractTextFromPDF(buffer);
+            if (!text) {
+              showToast("❌ Não foi possível extrair texto desse PDF (pode ser escaneado).", "#f85149");
+              return;
+            }
+          } else {
+            text = await file.text();
+          }
+          iaDocumentContext = {
+            name: file.name,
+            content: truncateText(text, IA_DOC_MAX_CHARS),
+            size: file.size
+          };
+          updateIADocContextUI();
+          showToast("📄 Documento anexado: " + file.name, "var(--accent2)");
+        } catch (err) {
+          showToast("❌ Erro ao ler arquivo: " + err.message, "#f85149");
+          iaDocumentContext = null;
+          updateIADocContextUI();
+        }
+      }
+
       // NOVO V10: pré-carrega o modelo no Ollama ao abrir o chat (primeiro token mais rápido)
       async function preloadModel() {
         if (!selectedOllamaModel) return;
@@ -1195,7 +1577,18 @@ COMANDOS QUE VOCÊ CONHECE:
           await res.text();
         } catch {}
       }
-      function openAI() { document.getElementById("iaOverlay").classList.add("open"); document.getElementById("iaInput").focus(); checkOllama().then(preloadModel); }
+      function openAI() {
+        document.getElementById("iaOverlay").classList.add("open");
+        document.getElementById("iaInput").focus();
+        if (isCloud) {
+          const status = document.getElementById("iaStatus");
+          status.textContent = "🌐 Chat indisponível no modo online — instale o app localmente";
+          status.style.color = "var(--accent)";
+          document.getElementById("iaSendBtn").disabled = true;
+          return;
+        }
+        checkOllama().then(preloadModel);
+      }
       function closeIA() { document.getElementById("iaOverlay").classList.remove("open"); }
       async function checkOllama() {
         const status = document.getElementById("iaStatus");
@@ -1215,13 +1608,17 @@ COMANDOS QUE VOCÊ CONHECE:
       }
       document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("iaInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendIA(); } });
+        initIADragDrop();
         renderFavorites();
       });
       async function sendIA() {
+        if (isCloud) { showToast("🌐 Chat indisponível no modo online.", "var(--accent)"); return; }
         const input = document.getElementById("iaInput");
         const btn = document.getElementById("iaSendBtn");
         const msg = input.value.trim();
         if (!msg) return;
+
+        // Monta mensagem do usuário (apenas a pergunta; documento vai no system prompt)
         addIAMessage(msg, "user");
         input.value = "";
         btn.disabled = true;
@@ -1232,7 +1629,8 @@ COMANDOS QUE VOCÊ CONHECE:
         scrollIAToBottom();
         iaConversation.push({ role: "user", content: msg });
         try {
-          const res = await fetch(API + "/ollama/chat", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ model: selectedOllamaModel, messages: [{ role: "system", content: SYSTEM_PROMPT }, ...iaConversation], stream: true, keep_alive: "10m" }) });
+          const messages = [{ role: "system", content: buildSystemPrompt() }, ...iaConversation];
+          const res = await fetch(API + "/ollama/chat", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ model: selectedOllamaModel, messages, stream: true, keep_alive: "10m" }) });
           if (!res.ok || !res.body) throw new Error("Falha no proxy Ollama: HTTP " + res.status);
           typingEl.remove();
           const aiMsgEl = addIAMessage("", "ai");
