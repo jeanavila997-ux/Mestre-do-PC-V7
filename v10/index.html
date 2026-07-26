@@ -51,7 +51,8 @@
         height: 100vh;
         overflow-y: auto;
       }
-      .logo-img { width: 100%; margin-bottom: 20px; border-radius: 10px; }
+      .logo-img { width: 100%; margin-bottom: 20px; border-radius: 10px; cursor: pointer; transition: transform 0.2s, filter 0.2s; }
+      .logo-img:hover { transform: scale(1.04); filter: drop-shadow(0 0 12px rgba(0,212,255,0.5)); }
       .nav-item {
         display: block;
         padding: 9px 14px;
@@ -316,7 +317,7 @@
   </head>
   <body>
     <div class="sidebar">
-      <img src="../logo-mestre-v7-transparent.png" class="logo-img" alt="Mestre do PC V10" onerror="this.style.display='none'" />
+      <img src="../logo-mestre-v7-transparent.png" class="logo-img" alt="Mestre do PC V10" title="Voltar ao início" onclick="voltarInicio()" onerror="this.style.display='none'" />
       <div id="nav"></div>
     </div>
     <div class="main">
@@ -769,6 +770,12 @@
       function toggleCat(header) { header.parentElement.classList.toggle("active"); }
       const API = "http://127.0.0.1:7777";
       let serverOnline = false;
+      // ===== NOVO V10: voltarInicio() — clica na logo para voltar ao topo =====
+      function voltarInicio() {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        nav.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
+        showToast("🔝 Voltou ao início");
+      }
       // ===== NOVO V10: toggleTheme() =====
       function toggleTheme() {
         document.body.classList.toggle("light");
