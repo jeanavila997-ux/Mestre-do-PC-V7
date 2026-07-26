@@ -1083,7 +1083,9 @@
       // ===== INTEGRAÇÃO OLLAMA (padrão V7) =====
       const OLLAMA_URL = "http://localhost:11434";
       const OLLAMA_MODEL = "qwen2.5-coder:1.5b";
-      const OLLAMA_MODEL_PREFERENCES = ["glm-5.2:cloud", "minimax-m3:cloud", "kimi-k2.5:cloud", "gemma4:cloud", "glm-5.1:cloud", "qwen2.5-coder:1.5b"];
+      // Modelo LOCAL como padrão (funciona sem login Ollama Cloud).
+      // Cloud models ficam como fallback (exigem `ollama signin`).
+      const OLLAMA_MODEL_PREFERENCES = ["qwen2.5-coder:1.5b", "glm-5.2:cloud", "minimax-m3:cloud", "kimi-k2.5:cloud", "gemma4:cloud", "glm-5.1:cloud"];
       let selectedOllamaModel = OLLAMA_MODEL;
       function chooseOllamaModel(models) { return OLLAMA_MODEL_PREFERENCES.find((m) => models.includes(m)) || models.find((m) => m.toLowerCase().includes("qwen")) || models[0] || OLLAMA_MODEL; }
       const SYSTEM_PROMPT = `Você é o Mestre do PC V10, um assistente especializado em manutenção de computadores Windows.
@@ -1105,7 +1107,12 @@ COMANDOS QUE VOCÊ CONHECE:
 - Drivers: Get-WmiObject Win32_PnPSignedDriver, pnputil
 - Privacidade: AllowTelemetry, AdvertisingInfo, Cortana`;
       let iaConversation = [];
-      function openAI() { document.getElementById("iaOverlay").classList.add("open"); document.getElementById("iaInput").focus(); checkOllama(); }
+      // NOVO V10: pré-carrega o modelo no Ollama ao abrir o chat (primeiro token mais rápido)
+      async function preloadModel() {
+        if (!selectedOllamaModel) return;
+        try { await fetch(API + "/ollama/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: selectedOllamaModel, keep_alive: -1, messages: [] }) }); } catch {}
+      }
+      function openAI() { document.getElementById("iaOverlay").classList.add("open"); document.getElementById("iaInput").focus(); checkOllama().then(preloadModel); }
       function closeIA() { document.getElementById("iaOverlay").classList.remove("open"); }
       async function checkOllama() {
         const status = document.getElementById("iaStatus");
@@ -1142,7 +1149,7 @@ COMANDOS QUE VOCÊ CONHECE:
         scrollIAToBottom();
         iaConversation.push({ role: "user", content: msg });
         try {
-          const res = await fetch(API + "/ollama/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: selectedOllamaModel, messages: [{ role: "system", content: SYSTEM_PROMPT }, ...iaConversation], stream: true }) });
+          const res = await fetch(API + "/ollama/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: selectedOllamaModel, messages: [{ role: "system", content: SYSTEM_PROMPT }, ...iaConversation], stream: true, keep_alive: -1 }) });
           typingEl.remove();
           const aiMsgEl = addIAMessage("", "ai");
           const reader = res.body.getReader();

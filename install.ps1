@@ -103,6 +103,27 @@ try {
 }
 
 # ---------------------------------------------------------------
+# 3b. Ollama + signin (para modelos cloud)
+# ---------------------------------------------------------------
+Write-Step "Verificando Ollama..."
+$ollama = Get-Command ollama -ErrorAction SilentlyContinue
+if ($ollama) {
+    Write-Ok "Ollama detectado: $(& ollama -v 2>&1 | Select-Object -First 1)"
+    # Baixa modelo local padrao (nao exige login)
+    if (-not (& ollama list 2>$null | Select-String -SimpleMatch 'qwen2.5-coder')) {
+        Write-Step "Baixando modelo local padrao qwen2.5-coder:1.5b (~1 GB)..."
+        & ollama pull qwen2.5-coder:1.5b 2>&1 | Out-Host
+    } else {
+        Write-Ok "Modelo local qwen2.5-coder ja presente."
+    }
+    # Signin para modelos cloud (opcional, interativo)
+    Write-Step "Ollama Cloud (opcional): para usar modelos cloud (glm-5.2:cloud, gemma4:cloud...) execute 'ollama signin' apos a instalacao."
+} else {
+    Write-Warn2 "Ollama ausente. A IA Local nao funcionara. Instale via: irm https://ollama.com/install.ps1 | iex"
+    Write-Warn2 "Ou baixe em https://ollama.com/download — depois rode novamente este instalador."
+}
+
+# ---------------------------------------------------------------
 # 4a. Tarefa agendada do Launcher (Admin, AtLogon)
 # ---------------------------------------------------------------
 Write-Step "Registrando tarefa do Launcher (AtLogon, Admin)..."

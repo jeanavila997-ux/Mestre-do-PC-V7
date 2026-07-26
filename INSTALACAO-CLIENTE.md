@@ -70,9 +70,23 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ### Baixar um modelo (todas as plataformas)
 ```bash
-ollama pull qwen2.5-coder:1.5b     # modelo local leve (~1 GB)
+ollama pull qwen2.5-coder:1.5b     # modelo local leve (~1 GB) — PADRÃO do V10, funciona sem login
 ollama run qwen2.5-coder:1.5b      # testar
-# Modelos cloud (sem hardware local): o app já detecta glm-5.2:cloud, gemma4:cloud, etc.
+```
+
+### Ativar modelos cloud (opcional — exige conta Ollama)
+A V10 também detecta modelos cloud (`glm-5.2:cloud`, `gemma4:cloud`, `kimi-k2.5:cloud`, `minimax-m3:cloud`). Para usá-los:
+```bash
+ollama signin      # abre o navegador para login em ollama.com
+```
+> Sem `ollama signin`, os modelos cloud falham. O V10 usa `qwen2.5-coder:1.5b` (local) como padrão justamente para funcionar sem login.
+
+### Desativar cloud (modo 100% local/privado)
+```bash
+# Variável de ambiente
+export OLLAMA_NO_CLOUD=1           # Linux/macOS
+setx OLLAMA_NO_CLOUD 1             # Windows
+# Ou em ~/.ollama/server.json: { "disable_ollama_cloud": true }
 ```
 
 ---
@@ -231,7 +245,37 @@ start v10\index.html
 
 ---
 
-## 8. Solução de problemas
+## 8. Configuração avançada do Ollama (variáveis de ambiente)
+
+| Variável | Padrão | Função |
+|---|---|---|
+| `OLLAMA_ORIGINS` | `127.0.0.1,0.0.0.0` | Origens CORS permitidas. A V10 já usa proxy, mas para acesso browser direto: `setx OLLAMA_ORIGINS "*"` |
+| `OLLAMA_HOST` | `127.0.0.1:11434` | Bind address. Para expor na rede: `0.0.0.0:11434` |
+| `OLLAMA_MODELS` | `~/.ollama/models` | Local dos modelos. Mude se pouco espaço no C: → `setx OLLAMA_MODELS "D:\ollama-models"` |
+| `OLLAMA_KEEP_ALIVE` | `5m` | Tempo que o modelo fica em memória. `-1` = sempre carregado (resposta +rápida) |
+| `OLLAMA_CONTEXT_LENGTH` | `4096` | Tamanho do contexto (tokens) |
+| `OLLAMA_NO_CLOUD` | (off) | `1` desativa modelos cloud (modo 100% local/privado) |
+| `HTTPS_PROXY` | — | Proxy corporativo para baixar modelos. NÃO use `HTTP_PROXY` |
+| `OLLAMA_FLASH_ATTENTION` | auto | `1` força Flash Attention (menos RAM) |
+| `OLLAMA_KV_CACHE_TYPE` | `f16` | `q8_0` = metade da RAM com perda mínima |
+| `OLLAMA_NUM_PARALLEL` | `1` | Requisições paralelas por modelo |
+| `OLLAMA_MAX_LOADED_MODELS` | 3×GPUs | Máximo de modelos simultâneos em memória |
+
+**No Windows:** `setx VAR "valor"` (persiste após reboot). Depois reinicie o Ollama.
+**No Linux (systemd):** `sudo systemctl edit ollama` → `Environment="VAR=valor"` → `systemctl daemon-reload && systemctl restart ollama`.
+**No macOS (app):** `launchctl setenv VAR "valor"` + reiniciar Ollama.
+
+### Verificar GPU / modelo carregado
+```bash
+ollama ps      # PROCESSOR: 100% GPU / 100% CPU / misto
+```
+
+### Pré-carregar modelo (resposta instantânea no primeiro chat)
+```bash
+curl http://localhost:11434/api/chat -d '{"model":"qwen2.5-coder:1.5b","keep_alive":-1}'
+```
+
+## 9. Solução de problemas
 
 | Sintoma | Causa | Solução |
 |---|---|---|
@@ -239,12 +283,14 @@ start v10\index.html
 | "Ollama offline" no IA Local | Ollama não rodando | `ollama serve` ou abra o app Ollama |
 | Comando não executa | Launcher sem admin | registrar a tarefa agendada (roda em contexto elevado) |
 | IA não responde | Sem modelos | `ollama pull qwen2.5-coder:1.5b` |
+| Modelo cloud falha | Não fez login | `ollama signin` (ou use o modelo local padrão) |
 | `npm install` falha | Node ausente/desatualizado | instale Node 18+ via nodejs.org |
 | CORS ao abrir via file:// | (resolvido na V10) | o app já usa proxy pelo launcher (`/ollama/*`) |
+| Pouco espaço p/ modelos | — | `setx OLLAMA_MODELS "D:\ollama-models"` + reiniciar Ollama |
 
 ---
 
-## 9. Versões testadas na máquina de desenvolvimento
+## 10. Versões testadas na máquina de desenvolvimento
 
 ```
 Node:        v24.18.0
