@@ -11,8 +11,10 @@ This supplements the root `AGENTS.md` with a repo-local ECC baseline.
 ## MCP Baseline
 
 Treat `.codex/config.toml` as the default ECC-safe baseline for work in this repository.
-The generated baseline enables Context7, Exa, Memory, Playwright, and Sequential Thinking.
+The generated baseline enables Context7, Exa, Memory, Playwright, Sequential Thinking, and **mestre-do-pc** (the project's own MCP server with 33 diagnostic/maintenance tools).
 GitHub access should use the connected GitHub app; the old npm GitHub MCP is deprecated.
+
+The `mestre-do-pc` MCP server requires the launcher to be running at `http://127.0.0.1:7777` (start with `node v10/launcher.js` or `start-mestre.bat`). It exposes system tools (disk, RAM, network, cleanup, Defender, Ollama chat) via stdio.
 
 ## Multi-Agent Support
 

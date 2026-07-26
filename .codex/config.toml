@@ -5,6 +5,10 @@ approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "live"
 
+[mcp_servers.mestre-do-pc]
+command = "node"
+args = ["mcp-server/index.js"]
+
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp@3.2.5"]
