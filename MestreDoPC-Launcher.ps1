@@ -335,6 +335,97 @@ try {
             continue
         }
 
+        # GET /ollama/tags — proxy para listar modelos do Ollama (evita CORS do browser)
+        if ($req.HttpMethod -eq "GET" -and $req.Url.AbsolutePath -eq "/ollama/tags") {
+            try {
+                $ollamaRes = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($ollamaRes.Content)
+                $res.StatusCode = 200
+                $res.ContentType = "application/json; charset=utf-8"
+                $res.ContentLength64 = $bytes.Length
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+            } catch {
+                $body = '{"error":"Ollama offline","models":[]}'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                $res.StatusCode = 502
+                $res.ContentLength64 = $bytes.Length
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+            }
+            continue
+        }
+
+        # POST /ollama/chat — proxy com streaming NDJSON para o Ollama
+        if ($req.HttpMethod -eq "POST" -and $req.Url.AbsolutePath -eq "/ollama/chat") {
+            $streamingStarted = $false
+            try {
+                $reader = New-Object System.IO.StreamReader($req.InputStream)
+                $rawBody = $reader.ReadToEnd()
+                $reader.Close()
+                $client = New-Object System.Net.Http.HttpClient
+                $client.Timeout = [System.Threading.Timeout]::InfiniteTimeSpan
+                $content = New-Object System.Net.Http.StringContent($rawBody, [System.Text.Encoding]::UTF8, "application/json")
+                $reqMsg = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Post, "http://localhost:11434/api/chat")
+                $reqMsg.Content = $content
+                $ollamaResp = $client.SendAsync($reqMsg, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
+                $res.StatusCode = [int]$ollamaResp.StatusCode
+                $res.ContentType = "application/x-ndstream"
+                $inStream = $ollamaResp.Content.ReadAsstreamAsync().Result
+                $outStream = $res.OutputStream
+                $streamingStarted = $true
+                $buffer = New-Object byte[] 4096
+                while ($true) {
+                    $read = $inStream.Read($buffer, 0, $buffer.Length)
+                    if ($read -le 0) { break }
+                    $outStream.Write($buffer, 0, $read)
+                    $outStream.Flush()
+                }
+            } catch {
+                if (-not $streamingStarted) {
+                    try {
+                        $body = '{"error":"' + ($_.Exception.Message -replace '["\\]','\$&') + '"}'
+                        $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                        $res.StatusCode = 502
+                        $res.ContentLength64 = $bytes.Length
+                        $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                    } catch {}
+                }
+            } finally {
+                try { $res.Close() } catch {}
+                try { if ($ollamaResp) { $ollamaResp.Dispose() } } catch {}
+                try { if ($client) { $client.Dispose() } } catch {}
+            }
+            continue
+        }
+
+        # GET /status — métricas do sistema (CPU, RAM, disco, uptime) para dashboard V10
+        if ($req.HttpMethod -eq "GET" -and $req.Url.AbsolutePath -eq "/status") {
+            try {
+                $os = Get-WmiObject Win32_OperatingSystem
+                $ramFreeGB = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+                $ramTotalGB = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+                $cpuLoad = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+                $disk = Get-PSDrive C
+                $diskFreeGB = [math]::Round($disk.Free/1GB, 2)
+                $diskUsedGB = [math]::Round($disk.Used/1GB, 2)
+                $boot = [Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime)
+                $uptimeSec = [int]((Get-Date) - $boot).TotalSeconds
+                $payload = [ordered]@{
+                    cpu = [math]::Round($cpuLoad, 1)
+                    ramFree = $ramFreeGB
+                    ramTotal = $ramTotalGB
+                    diskFree = $diskFreeGB
+                    diskUsed = $diskUsedGB
+                    uptimeSec = $uptimeSec
+                }
+                Write-JsonResponse -Response $res -Payload $payload
+            } catch {
+                Write-JsonResponse -Response $res -Payload @{ error = $_.Exception.Message } -StatusCode 500
+            }
+            continue
+        }
+
         # Rota nao encontrada
         $res.StatusCode = 404
         $notFound = '{"success":false,"output":"Rota nao encontrada."}'
@@ -348,6 +439,10 @@ catch [System.Net.HttpListenerException] {
     if ($_.Exception.ErrorCode -ne 995) {
         Write-Host "  [ERRO] $($_.Exception.Message)" -ForegroundColor Red
     }
+}
+catch {
+    # Captura qualquer outra excecao para nao derrubar o servidor
+    Write-Host "  [ERRO INESPERADO] $($_.Exception.Message)" -ForegroundColor Red
 }
 finally {
     if ($listener -and $listener.IsListening) { $listener.Stop() }

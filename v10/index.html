@@ -987,9 +987,9 @@
           } catch { document.getElementById("mcpStatusText").textContent = "Erro"; }
         } else { document.getElementById("mcpStatusText").textContent = "Indisponível"; }
         try {
-          const ro = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(2000) });
+          const ro = await fetch(API + "/ollama/tags", { signal: AbortSignal.timeout(3000) });
           const do_ = await ro.json();
-          const models = do_.models?.map((m) => m.name) || [];
+          const models = (do_.models || []).map((m) => m.name || m.model);
           const ollamaEl = document.getElementById("ollamaStatusText");
           if (models.length > 0) { ollamaEl.textContent = "Online (" + (models.find((m) => m.includes("qwen")) || models[0]) + ")"; ollamaEl.style.color = "var(--accent2)"; }
           else { ollamaEl.textContent = "Sem modelos"; ollamaEl.style.color = "#f0ad4e"; }
@@ -1100,9 +1100,10 @@ COMANDOS QUE VOCÊ CONHECE:
       async function checkOllama() {
         const status = document.getElementById("iaStatus");
         try {
-          const res = await fetch(OLLAMA_URL + "/api/tags");
+          const res = await fetch(API + "/ollama/tags", { signal: AbortSignal.timeout(5000) });
+          if (!res.ok) throw new Error("ollama offline");
           const data = await res.json();
-          const models = data.models?.map(m => m.name) || [];
+          const models = (data.models || []).map(m => m.name || m.model);
           if (models.length > 0) {
             selectedOllamaModel = chooseOllamaModel(models);
             const sel = document.getElementById("ollamaModelSelect");
@@ -1131,7 +1132,7 @@ COMANDOS QUE VOCÊ CONHECE:
         scrollIAToBottom();
         iaConversation.push({ role: "user", content: msg });
         try {
-          const res = await fetch(OLLAMA_URL + "/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: selectedOllamaModel, messages: [{ role: "system", content: SYSTEM_PROMPT }, ...iaConversation], stream: true }) });
+          const res = await fetch(API + "/ollama/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: selectedOllamaModel, messages: [{ role: "system", content: SYSTEM_PROMPT }, ...iaConversation], stream: true }) });
           typingEl.remove();
           const aiMsgEl = addIAMessage("", "ai");
           const reader = res.body.getReader();
