@@ -7,7 +7,7 @@ set "BASE_DIR=%~dp0"
 set "RUNTIME_DIR=%BASE_DIR%"
 if not exist "%RUNTIME_DIR%MestreDoPC-Launcher.ps1" set "RUNTIME_DIR=%BASE_DIR%Mestre_Dados\"
 set "INSTALL_DIR=%RUNTIME_DIR:~0,-1%"
-set "HTML_PATH=%RUNTIME_DIR%MestreDoPC-Ultimate-v7.html"
+set "HTML_PATH=%RUNTIME_DIR%legado\MestreDoPC-Ultimate-v7.html"
 set "REGISTER_SCRIPT=%RUNTIME_DIR%Register-MestreTask.ps1"
 
 if not exist "%HTML_PATH%" (

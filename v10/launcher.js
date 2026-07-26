@@ -1,0 +1,232 @@
+#!/usr/bin/env node
+// Mestre do PC V10 - Launcher Node.js (autônomo)
+// Porta 7777. Executa PowerShell localmente com jobs, proxy Ollama com streaming
+// e endpoint /status com métricas do sistema para o dashboard.
+
+import http from "node:http";
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PORT = process.env.MPC_PORT ? Number(process.env.MPC_PORT) : 7777;
+const HOST = process.env.MPC_HOST || "127.0.0.1";
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
+
+const jobs = new Map();
+
+function cors(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+function sendJson(res, status, data) {
+  const body = JSON.stringify(data);
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  });
+  res.end(body);
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let buf = "";
+    req.on("data", (c) => (buf += c));
+    req.on("end", () => {
+      try { resolve(JSON.parse(buf || "{}")); }
+      catch { resolve({}); }
+    });
+  });
+}
+
+// Executa PowerShell e devolve o id do job. Output é acumulado em job.output (ao vivo).
+function runPowerShell(cmd) {
+  const id = randomUUID();
+  const job = { id, state: "running", output: "", exitCode: null, success: null, startedAt: Date.now() };
+  jobs.set(id, job);
+  const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd], {
+    windowsHide: true,
+  });
+  ps.stdout.on("data", (d) => (job.output += d.toString()));
+  ps.stderr.on("data", (d) => (job.output += d.toString()));
+  ps.on("close", (code) => {
+    job.state = "completed";
+    job.exitCode = code;
+    job.success = code === 0;
+    job.completedAt = Date.now();
+  });
+  ps.on("error", (e) => {
+    job.state = "completed";
+    job.success = false;
+    job.output += `\n[ERRO] ${e.message}`;
+    job.completedAt = Date.now();
+  });
+  return id;
+}
+
+// Proxy Ollama com streaming (NDJSON passado direto para o cliente).
+async function proxyOllamaStream(path, req, res) {
+  const body = await readBody(req);
+  let upstream;
+  try {
+    upstream = await fetch(OLLAMA_URL + path, {
+      method: req.method,
+      headers: { "Content-Type": "application/json" },
+      body: req.method === "POST" ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    return sendJson(res, 502, { error: "Ollama offline: " + e.message });
+  }
+  if (!upstream.ok || !upstream.body) {
+    const text = await upstream.text().catch(() => "");
+    return sendJson(res, upstream.status || 502, { error: text || "Ollama error" });
+  }
+  res.writeHead(upstream.status, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "no-cache",
+  });
+  const reader = upstream.body.getReader();
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+  } catch (e) {
+    // cliente desconectou ou erro de stream — ignora silenciosamente
+  } finally {
+    res.end();
+  }
+}
+
+// Proxy Ollama simples (JSON único, ex: /api/tags).
+async function proxyOllamaJson(path, res) {
+  let upstream;
+  try {
+    upstream = await fetch(OLLAMA_URL + path, { signal: AbortSignal.timeout(5000) });
+  } catch (e) {
+    return sendJson(res, 502, { error: "Ollama offline", models: [] });
+  }
+  const text = await upstream.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { output: text }; }
+  sendJson(res, upstream.status, data);
+}
+
+// Métricas do sistema via PowerShell (para o dashboard V10).
+function getSystemStatus(res) {
+  const ps = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", `
+$os = Get-WmiObject Win32_OperatingSystem
+$ramFree = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+$ramTotal = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+$cpu = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+$disk = Get-PSDrive C
+$diskFree = [math]::Round($disk.Free/1GB, 2)
+$diskUsed = [math]::Round($disk.Used/1GB, 2)
+$boot = [Management.ManagementDateTimeConverter]::ToDateTime($os.LastBootUpTime)
+$uptime = [int]((Get-Date) - $boot).TotalSeconds
+@{cpu=[math]::Round($cpu,1);ramFree=$ramFree;ramTotal=$ramTotal;diskFree=$diskFree;diskUsed=$diskUsed;uptimeSec=$uptime} | ConvertTo-Json -Compress
+`], { windowsHide: true });
+  let out = "";
+  ps.stdout.on("data", (d) => (out += d.toString()));
+  ps.stderr.on("data", (d) => (out += d.toString()));
+  ps.on("close", () => {
+    try { sendJson(res, 200, JSON.parse(out.trim())); }
+    catch { sendJson(res, 200, { cpu: 0, ramFree: 0, ramTotal: 0, diskFree: 0, diskUsed: 0, uptimeSec: 0 }); }
+  });
+  ps.on("error", () => sendJson(res, 500, { error: "Falha ao obter métricas" }));
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${HOST}`);
+  const path = url.pathname;
+  if (req.method === "OPTIONS") { cors(res); res.writeHead(204); return res.end(); }
+
+  try {
+    if (path === "/ping") {
+      const activeJobs = [...jobs.values()].filter((j) => j.state === "running").length;
+      return sendJson(res, 200, {
+        status: "ok",
+        admin: true,
+        state: activeJobs > 0 ? "busy" : "idle",
+        activeJobs,
+        version: "10.0.0",
+        pid: process.pid,
+      });
+    }
+
+    if (path === "/mcp-status") {
+      return sendJson(res, 200, { status: "online", version: "10.0.0" });
+    }
+
+    if (path === "/status") {
+      return getSystemStatus(res);
+    }
+
+    if (path === "/run" && req.method === "POST") {
+      const body = await readBody(req);
+      if (!body.cmd) return sendJson(res, 400, { success: false, output: "Missing 'cmd'" });
+      const id = runPowerShell(body.cmd);
+      return sendJson(res, 202, { success: true, accepted: true, jobId: id, state: "running", activeJobs: 1 });
+    }
+
+    if (path === "/run-status") {
+      const id = url.searchParams.get("id");
+      const job = jobs.get(id);
+      if (!job) return sendJson(res, 404, { success: false, output: "Job not found", state: "not_found" });
+      return sendJson(res, 200, {
+        jobId: job.id,
+        state: job.state,
+        success: job.state === "completed" ? job.success : null,
+        running: job.state === "running",
+        done: job.state !== "running",
+        exitCode: job.exitCode,
+        output: job.output || "",
+        activeJobs: [...jobs.values()].filter((j) => j.state === "running").length,
+      });
+    }
+
+    if (path === "/open-terminal" && req.method === "POST") {
+      spawn("powershell.exe", ["-NoLogo", "-NoExit", "-Command", "Set-Location '" + __dirname.replace(/'/g, "''") + "'"], { windowsHide: false, detached: true, stdio: "ignore" }).unref();
+      return sendJson(res, 200, { success: true, output: "Terminal aberto." });
+    }
+
+    // Proxy Ollama
+    if (path === "/ollama/tags") return proxyOllamaJson("/api/tags", res);
+    if (path === "/ollama/chat" && req.method === "POST") return proxyOllamaStream("/api/chat", req, res);
+    if (path === "/ollama/pull" && req.method === "POST") return proxyOllamaStream("/api/pull", req, res);
+
+    // Servir frontend estático
+    if (path === "/" || path === "/index.html") {
+      try {
+        const html = await readFile(join(__dirname, "index.html"), "utf8");
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        return res.end(html);
+      } catch { return sendJson(res, 404, { error: "index.html não encontrado" }); }
+    }
+    if (path === "/favicon.png" || path === "/logo-mestre-v7-transparent.png") {
+      try {
+        const buf = await readFile(join(__dirname, "..", path.slice(1)));
+        res.writeHead(200, { "Content-Type": "image/png" });
+        return res.end(buf);
+      } catch { return sendJson(res, 404, { error: "recurso não encontrado" }); }
+    }
+
+    sendJson(res, 404, { success: false, output: "Rota não encontrada." });
+  } catch (e) {
+    sendJson(res, 500, { error: e.message });
+  }
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`Mestre do PC V10 - Launcher ativo em http://${HOST}:${PORT}`);
+  console.log(`Ollama proxy -> ${OLLAMA_URL}`);
+  console.log(`Dashboard /status | Streaming /ollama/chat`);
+});
