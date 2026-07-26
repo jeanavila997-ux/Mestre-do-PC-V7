@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mestre do PC V10 - Ultimate Plus</title>
-    <link rel="icon" type="image/png" sizes="512x512" href="../favicon.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="favicon.png" />
     <style>
       :root {
         --bg: #05070a;
@@ -350,7 +350,7 @@
   </head>
   <body>
     <div class="sidebar">
-      <img src="../logo-mestre-v7-transparent.png" class="logo-img" alt="Mestre do PC V10" title="Voltar ao início" onclick="voltarInicio()" onerror="this.style.display='none'" />
+      <img src="logo-mestre-v7-transparent.png" class="logo-img" alt="Mestre do PC V10" title="Voltar ao início" onclick="voltarInicio()" onerror="this.style.display='none'" />
       <div id="nav"></div>
     </div>
     <div class="main">
@@ -835,6 +835,7 @@
         container.appendChild(div);
       });
       function toggleCat(header) { header.parentElement.classList.toggle("active"); }
+      const isCloud = window.location.protocol.startsWith("http") && !["localhost","127.0.0.1"].includes(location.hostname);
       const API = window.location.protocol.startsWith("http")
         ? window.location.origin
         : "http://127.0.0.1:7777";
@@ -843,6 +844,14 @@
         "X-Mestre-Client": "v10-web",
       };
       let serverOnline = false;
+      if (isCloud) {
+        const banner = document.createElement("div");
+        banner.id = "cloudBanner";
+        banner.style.cssText = "background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,255,136,0.08));border:1px solid var(--accent);border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:12px;font-size:0.92rem;";
+        banner.innerHTML = '<span style="font-size:1.4rem">🌐</span><div><strong>Modo Online</strong> — Você está vendo a interface do Mestre do PC. Para executar comandos, <a href="https://github.com/jeanavila997-ux/Mestre-do-PC-V7#instala%C3%A7%C3%A3o" style="color:var(--accent);text-decoration:underline" target="_blank">instale e rode o app localmente</a>.</div>';
+        const mainArea = document.querySelector(".main");
+        if (mainArea) mainArea.insertBefore(banner, mainArea.children[1]);
+      }
       // ===== NOVO V10: voltarInicio() — clica na logo para voltar ao topo =====
       function voltarInicio() {
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -975,6 +984,7 @@
         const codeEl = document.getElementById(uid);
         if (!codeEl) return;
         const code = codeEl.innerText.trim();
+        if (isCloud) { showToast("🌐 Disponível apenas com o launcher local.", "var(--accent)"); return; }
         if (!serverOnline) { showToast("❌ Launcher offline. Execute o Launcher primeiro.", "#f85149"); return; }
         if (!confirmBeforeExecution(code, "live")) return;
         const title = codeEl.parentElement.querySelector("h4").textContent;
@@ -994,6 +1004,10 @@
       }
       // ===== NOVO V10: loadDashboard() — métricas em tempo real (inspirado V8/V9) =====
       async function loadDashboard() {
+        if (isCloud) {
+          ["mCpu","mRam","mDisk","mUp"].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = "--"; });
+          return;
+        }
         try {
           const r = await fetch(API + "/status", { signal: AbortSignal.timeout(3000) });
           if (!r.ok) return;
@@ -1081,6 +1095,20 @@
       }
       // ===== checkServer() (padrão V7) + dashboard + MCP + Ollama =====
       async function checkServer() {
+        if (isCloud) {
+          serverOnline = false;
+          document.getElementById("serverStatus").style.background = "rgba(0,212,255,0.08)";
+          document.getElementById("launcherStatusIcon").textContent = "🌐";
+          document.getElementById("statusText").innerHTML = "🌐 Modo Online — <strong>Interface em modo visualização</strong>";
+          document.getElementById("launcherActivateBtn").style.display = "none";
+          document.getElementById("mcpStatusText").textContent = "Modo Online";
+          document.getElementById("mcpStatusIcon").textContent = "🌐";
+          document.getElementById("mcpActivateBtn").style.display = "none";
+          document.getElementById("ollamaStatusText").textContent = "Modo Online";
+          document.getElementById("ollamaStatusIcon").textContent = "🌐";
+          document.getElementById("ollamaActivateBtn").style.display = "none";
+          return;
+        }
         try {
           const r = await fetch(API + "/ping", { signal: AbortSignal.timeout(1500) });
           const d = await r.json();
@@ -1312,6 +1340,7 @@
       }
       // ===== executeCmd() (padrão V7) + histórico =====
       async function executeCmd(code) {
+        if (isCloud) { showToast("🌐 Disponível apenas com o launcher local.", "var(--accent)"); return; }
         if (serverOnline === false) { try { await navigator.clipboard.writeText(code); } catch {} showToast("⚠️ Servidor offline. Comando copiado.", "#f0a800"); return; }
         if (!confirmBeforeExecution(code)) return;
         const panel = document.getElementById("outputPanel");
@@ -1548,7 +1577,18 @@ COMANDOS QUE VOCÊ CONHECE:
           await res.text();
         } catch {}
       }
-      function openAI() { document.getElementById("iaOverlay").classList.add("open"); document.getElementById("iaInput").focus(); checkOllama().then(preloadModel); }
+      function openAI() {
+        document.getElementById("iaOverlay").classList.add("open");
+        document.getElementById("iaInput").focus();
+        if (isCloud) {
+          const status = document.getElementById("iaStatus");
+          status.textContent = "🌐 Chat indisponível no modo online — instale o app localmente";
+          status.style.color = "var(--accent)";
+          document.getElementById("iaSendBtn").disabled = true;
+          return;
+        }
+        checkOllama().then(preloadModel);
+      }
       function closeIA() { document.getElementById("iaOverlay").classList.remove("open"); }
       async function checkOllama() {
         const status = document.getElementById("iaStatus");
@@ -1572,6 +1612,7 @@ COMANDOS QUE VOCÊ CONHECE:
         renderFavorites();
       });
       async function sendIA() {
+        if (isCloud) { showToast("🌐 Chat indisponível no modo online.", "var(--accent)"); return; }
         const input = document.getElementById("iaInput");
         const btn = document.getElementById("iaSendBtn");
         const msg = input.value.trim();
