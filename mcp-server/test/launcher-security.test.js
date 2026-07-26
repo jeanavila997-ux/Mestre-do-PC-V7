@@ -30,6 +30,37 @@ async function waitForServer(url) {
   throw new Error("Launcher Node não iniciou no prazo.");
 }
 
+test("launcher Node aceita PORT como alternativa a MPC_PORT", async (t) => {
+  const port = await reservePort();
+  const base = `http://127.0.0.1:${port}`;
+  const env = { ...process.env, PORT: String(port) };
+  delete env.MPC_PORT;
+  const child = spawn(process.execPath, [join(root, "v10", "launcher.js")], {
+    cwd: join(root, "v10"),
+    env,
+    windowsHide: true,
+    stdio: "ignore",
+  });
+  t.after(() => child.kill());
+
+  await waitForServer(base);
+
+  const ping = await fetch(base + "/ping");
+  assert.equal(ping.status, 200);
+
+  // A validacao de origem deriva de BASE_URL, entao acompanha a porta escolhida.
+  const externalOrigin = await fetch(base + "/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": "https://example.com",
+      "X-Mestre-Client": "v10-web",
+    },
+    body: JSON.stringify({ cmd: "Write-Host NAO_EXECUTAR" }),
+  });
+  assert.equal(externalOrigin.status, 403);
+});
+
 test("launcher Node serve a V10 e bloqueia POSTs externos", async (t) => {
   const port = await reservePort();
   const base = `http://127.0.0.1:${port}`;
