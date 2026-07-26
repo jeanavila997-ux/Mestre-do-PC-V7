@@ -283,7 +283,10 @@
         background: var(--accent2); color: #000; padding: 13px 30px; border-radius: 50px;
         font-weight: bold; box-shadow: 0 12px 30px rgba(0,255,136,0.45); z-index: 9999;
         display: none; align-items: center; gap: 8px; font-size: 0.95rem;
+        max-width: 90vw; word-break: break-word; white-space: pre-wrap; text-align: center;
       }
+      .toast.error { background: #f85149; color: #fff; }
+      .toast.info { background: var(--accent); color: #000; }
       /* ===== Modal IA (padrão V7) ===== */
       .ia-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 10000; display: none; justify-content: center; align-items: center; }
       .ia-overlay.open { display: flex; }
@@ -1058,7 +1061,23 @@
         t.style.color = color === "#f85149" ? "#fff" : "#000";
         t.style.display = "flex";
         clearTimeout(t._tid);
-        t._tid = setTimeout(() => (t.style.display = "none"), 2500);
+        t._tid = setTimeout(() => (t.style.display = "none"), 4500);
+      }
+
+      function logActivation(step, detail) {
+        const ts = new Date().toLocaleTimeString("pt-BR");
+        const line = `[${ts}] ${step}: ${detail}`;
+        let history = JSON.parse(localStorage.getItem("mestre_activation_log") || "[]");
+        history.unshift(line);
+        history = history.slice(0, 100);
+        localStorage.setItem("mestre_activation_log", JSON.stringify(history));
+        if (typeof console !== "undefined") console.log("[Mestre V10]", line);
+      }
+
+      function showActivationToast(msg, type = "info") {
+        const colors = { info: "var(--accent)", success: "var(--accent2)", error: "#f85149", warning: "#f0a800" };
+        showToast(msg, colors[type] || colors.info);
+        logActivation(type.toUpperCase(), msg);
       }
       // ===== checkServer() (padrão V7) + dashboard + MCP + Ollama =====
       async function checkServer() {
@@ -1114,12 +1133,18 @@
       // ===== NOVO V10: botões de ativação do Launcher, MCP e Ollama =====
       async function activateLauncher() {
         const btn = document.getElementById("launcherActivateBtn");
-        if (btn.dataset.activating === "true") return;
-        if (!serverOnline) { showToast("❌ Launcher offline. Não é possível ativar remotamente pelo navegador. Execute o atalho Mestre do PC.", "#f85149"); return; }
-        if (!confirm("Ativar o Launcher requer privilégios administrativos.\n\nDeseja continuar?")) return;
+        logActivation("LAUNCHER", "Botão acionado");
+        if (btn.dataset.activating === "true") { logActivation("LAUNCHER", "Ignorado: já em ativação"); return; }
+        if (!serverOnline) {
+          const msg = "Launcher offline. Para ativar, execute o atalho 'Mestre do PC' na Área de Trabalho.";
+          showActivationToast(msg, "error");
+          return;
+        }
+        if (!confirm("Ativar o Launcher requer privilégios administrativos.\n\nDeseja continuar?")) { logActivation("LAUNCHER", "Cancelado pelo usuário"); return; }
         btn.dataset.activating = "true";
         btn.disabled = true;
         btn.textContent = "⏳ Ativando...";
+        logActivation("LAUNCHER", "Iniciando tarefa agendada com UAC");
         try {
           const cmd = "schtasks /Run /TN 'MestreDoPC_Admin_Launcher'";
           const b64 = btoa(cmd);
@@ -1136,13 +1161,16 @@
             }
             exit 1
           `;
+          logActivation("LAUNCHER", "Enviando comando para launcher");
           const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
           const data = await res.json();
+          logActivation("LAUNCHER", "Resposta do launcher: HTTP " + res.status + " accepted=" + data.accepted);
           if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar launcher");
-          await livePollJob(data.jobId, (s) => { });
-          showToast("✅ Launcher ativado", "var(--accent2)");
+          await livePollJob(data.jobId, (s) => { logActivation("LAUNCHER", "Estado=" + s.state + " | " + (s.output || "").split("\n")[0]); });
+          showActivationToast("✅ Launcher ativado", "success");
         } catch (err) {
-          showToast("❌ Não foi possível ativar o launcher: " + err.message, "#f85149");
+          showActivationToast("❌ Não foi possível ativar o launcher: " + err.message, "error");
+          logActivation("LAUNCHER", "Erro: " + err.message);
         } finally {
           btn.disabled = false;
           btn.dataset.activating = "false";
@@ -1153,9 +1181,10 @@
 
       async function activateMCP() {
         const btn = document.getElementById("mcpActivateBtn");
-        if (btn.dataset.activating === "true") return;
-        if (!serverOnline) { showToast("❌ Launcher offline. Ative o Launcher primeiro.", "#f85149"); return; }
-        if (!confirm("Ativar o MCP executará o servidor do assistente de IA.\n\nDeseja continuar?")) return;
+        logActivation("MCP", "Botão acionado");
+        if (btn.dataset.activating === "true") { logActivation("MCP", "Ignorado: já em ativação"); return; }
+        if (!serverOnline) { showActivationToast("❌ Launcher offline. Ative o Launcher primeiro.", "error"); return; }
+        if (!confirm("Ativar o MCP executará o servidor do assistente de IA.\n\nDeseja continuar?")) { logActivation("MCP", "Cancelado pelo usuário"); return; }
         btn.dataset.activating = "true";
         btn.disabled = true;
         btn.textContent = "⏳ Ativando...";
@@ -1168,17 +1197,21 @@
             if (-not (Test-Path \$mcpPath)) { Write-Error "MCP não encontrado em: \$mcpPath"; exit 1 }
             \$node = Get-Command node.exe -ErrorAction SilentlyContinue
             if (-not \$node) { Write-Error "Node.js não encontrado no PATH."; exit 1 }
+            Write-Host "Iniciando MCP em: \$mcpPath"
             Start-Process \$node.Source -ArgumentList "\`"\$mcpPath\`"" -WindowStyle Hidden -WorkingDirectory \$mcpDir
             Start-Sleep -Seconds 3
             exit 0
           `;
+          logActivation("MCP", "Enviando comando para launcher");
           const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
           const data = await res.json();
+          logActivation("MCP", "Resposta do launcher: HTTP " + res.status + " accepted=" + data.accepted);
           if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar MCP");
-          await livePollJob(data.jobId, (s) => { });
-          showToast("✅ MCP ativado", "var(--accent2)");
+          await livePollJob(data.jobId, (s) => { logActivation("MCP", "Estado=" + s.state + " | " + (s.output || "").split("\n")[0]); });
+          showActivationToast("✅ MCP ativado", "success");
         } catch (err) {
-          showToast("❌ Não foi possível ativar o MCP: " + err.message, "#f85149");
+          showActivationToast("❌ Não foi possível ativar o MCP: " + err.message, "error");
+          logActivation("MCP", "Erro: " + err.message);
         } finally {
           btn.disabled = false;
           btn.dataset.activating = "false";
@@ -1189,9 +1222,10 @@
 
       async function activateOllama() {
         const btn = document.getElementById("ollamaActivateBtn");
-        if (btn.dataset.activating === "true") return;
-        if (!serverOnline) { showToast("❌ Launcher offline. Ative o Launcher primeiro.", "#f85149"); return; }
-        if (!confirm("Ativar o Ollama executará o servidor de IA local.\n\nDeseja continuar?")) return;
+        logActivation("OLLAMA", "Botão acionado");
+        if (btn.dataset.activating === "true") { logActivation("OLLAMA", "Ignorado: já em ativação"); return; }
+        if (!serverOnline) { showActivationToast("❌ Launcher offline. Ative o Launcher primeiro.", "error"); return; }
+        if (!confirm("Ativar o Ollama executará o servidor de IA local.\n\nDeseja continuar?")) { logActivation("OLLAMA", "Cancelado pelo usuário"); return; }
         btn.dataset.activating = "true";
         btn.disabled = true;
         btn.textContent = "⏳ Ativando...";
@@ -1199,6 +1233,7 @@
           const code = `
             \$ollama = Get-Command ollama -ErrorAction SilentlyContinue
             if (-not \$ollama) { Write-Error "Comando 'ollama' não encontrado no PATH. Instale o Ollama primeiro."; exit 1 }
+            Write-Host "Iniciando Ollama em: \$ollama.Source"
             Start-Process \$ollama.Source -ArgumentList "serve" -WindowStyle Hidden
             Start-Sleep -Seconds 4
             for (\$i = 0; \$i -lt 20; \$i++) {
@@ -1207,13 +1242,16 @@
             }
             exit 1
           `;
+          logActivation("OLLAMA", "Enviando comando para launcher");
           const res = await fetch(API + "/run", { method: "POST", headers: PRIVILEGED_HEADERS, body: JSON.stringify({ cmd: code }) });
           const data = await res.json();
+          logActivation("OLLAMA", "Resposta do launcher: HTTP " + res.status + " accepted=" + data.accepted);
           if (!res.ok || data.accepted !== true) throw new Error(data.output || "Falha ao ativar Ollama");
-          await livePollJob(data.jobId, (s) => { });
-          showToast("✅ Ollama ativado", "var(--accent2)");
+          await livePollJob(data.jobId, (s) => { logActivation("OLLAMA", "Estado=" + s.state + " | " + (s.output || "").split("\n")[0]); });
+          showActivationToast("✅ Ollama ativado", "success");
         } catch (err) {
-          showToast("❌ Não foi possível ativar o Ollama: " + err.message, "#f85149");
+          showActivationToast("❌ Não foi possível ativar o Ollama: " + err.message, "error");
+          logActivation("OLLAMA", "Erro: " + err.message);
         } finally {
           btn.disabled = false;
           btn.dataset.activating = "false";
