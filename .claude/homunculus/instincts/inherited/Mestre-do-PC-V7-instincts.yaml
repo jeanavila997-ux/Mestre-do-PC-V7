@@ -1,0 +1,319 @@
+# Instincts generated from https://github.com/avila2026/Mestre-do-PC-V7
+# Generated: 2026-05-24T21:28:20.444Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: Mestre-do-PC-V7-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do PC V7 Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat
+
+## Evidence
+
+- 2 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat: add installation and initialization scripts for Windows and project documentation, feat: suporte a parametros flat no MCP e script de instalacao do servidor
+
+---
+id: Mestre-do-PC-V7-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do PC V7 Commit Length
+
+## Action
+
+Write moderate-length commit messages (~80 characters)
+
+## Evidence
+
+- Average commit message length: 80 chars
+- Based on 2 commits
+
+---
+id: Mestre-do-PC-V7-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do PC V7 Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: Mestre-do-PC-V7-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do PC V7 Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: Mestre-do-PC-V7-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do PC V7 Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: Mestre-do-PC-V7-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do PC V7 Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: mestre-do-pc-v7-instinct-file-naming
+trigger: "When creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct File Naming
+
+## Action
+
+Name the file using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.files
+
+---
+id: mestre-do-pc-v7-instinct-function-naming
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Function Naming
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions
+
+---
+id: mestre-do-pc-v7-instinct-class-naming
+trigger: "When defining a new class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes
+
+---
+id: mestre-do-pc-v7-instinct-constant-naming
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: mestre-do-pc-v7-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle
+
+---
+id: mestre-do-pc-v7-instinct-export-style
+trigger: "When exporting modules or functions"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle
+
+---
+id: mestre-do-pc-v7-instinct-commit-format
+trigger: "When making a git commit"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Commit Format
+
+## Action
+
+Format the commit message using the conventional commit style with 'feat' prefix for features
+
+## Evidence
+
+- Seen in commit: feat: add installation and initialization scripts for Windows and project documentation
+- Seen in commit: feat: suporte a parametros flat no MCP e script de instalacao do servidor
+
+---
+id: mestre-do-pc-v7-instinct-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Commit Length
+
+## Action
+
+Keep the commit message around 80 characters in length
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: mestre-do-pc-v7-instinct-error-handling
+trigger: "When handling errors in code"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Error Handling
+
+## Action
+
+Use try-catch blocks and a global error handler
+
+## Evidence
+
+- Pattern in errorHandling.style
+- Pattern in errorHandling.globalHandler
+
+---
+id: mestre-do-pc-v7-instinct-test-location
+trigger: "When adding or updating tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: avila2026/Mestre-do-PC-V7
+---
+
+# Mestre Do Pc V7 Instinct Test Location
+
+## Action
+
+Place tests in a separate folder from the source code
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation
+

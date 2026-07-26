@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, site]
+  pull_request:
+    branches: [main, site]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: MestreDoPC-V7
+
+    strategy:
+      matrix:
+        node-version: ['20.x']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: MestreDoPC-V7/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
