@@ -1,6 +1,6 @@
 # ================================================================
-# Mestre do PC V7 - Servidor HTTP Admin (porta 7777)
-# O HTML envia comandos via fetch() -> este PS executa como Admin
+# Mestre do PC V10 - Servidor HTTP Admin (porta 7777)
+# A interface V10 envia comandos autorizados via fetch() -> este PS executa como Admin
 # ================================================================
 
 # Resolve o caminho do script logo no bootstrap para reutilizar no PID, task e elevacao.
@@ -27,10 +27,70 @@ Add-Type -AssemblyName System.Net.Http
 $PORT = 7777
 $BASE_URL = "http://127.0.0.1:$PORT"
 $URL = "$BASE_URL/"
+$PROJECT_DIR = Split-Path -Parent $scriptPath
+$V10_HTML = Join-Path $PROJECT_DIR "v10\index.html"
 $PID_FILE = Join-Path (Split-Path -Parent $scriptPath) "MestreDoPC-Launcher.pid"
 $CommandJobs = [hashtable]::Synchronized(@{})
 $JobRetentionMinutes = 30
 $JobTimeoutSeconds = 900
+$MaxConcurrentJobs = 3
+
+function Set-ResponseSecurityHeaders {
+    param(
+        [System.Net.HttpListenerRequest] $Request,
+        [System.Net.HttpListenerResponse] $Response
+    )
+
+    $Response.Headers["X-Content-Type-Options"] = "nosniff"
+    $Response.Headers["Referrer-Policy"] = "no-referrer"
+    $Response.Headers["Cache-Control"] = "no-store"
+
+    $origin = [string]$Request.Headers["Origin"]
+    if ($origin -eq $BASE_URL) {
+        $Response.Headers["Access-Control-Allow-Origin"] = $BASE_URL
+        $Response.Headers["Vary"] = "Origin"
+        $Response.Headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+        $Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, X-Mestre-Client"
+    }
+}
+
+function Test-PrivilegedClient {
+    param([System.Net.HttpListenerRequest] $Request)
+
+    $origin = [string]$Request.Headers["Origin"]
+    $client = [string]$Request.Headers["X-Mestre-Client"]
+
+    if ($origin -eq $BASE_URL -and $client -eq "v10-web") { return $true }
+    if ([string]::IsNullOrWhiteSpace($origin) -and $client -eq "mcp") { return $true }
+    return $false
+}
+
+function Read-LimitedRequestBody {
+    param(
+        [System.Net.HttpListenerRequest] $Request,
+        [int] $MaxChars = 131072
+    )
+
+    if ($Request.ContentLength64 -gt $MaxChars) {
+        throw "Corpo da requisicao excede o limite permitido."
+    }
+
+    $reader = [System.IO.StreamReader]::new($Request.InputStream, [System.Text.Encoding]::UTF8)
+    $builder = New-Object System.Text.StringBuilder
+    $buffer = New-Object char[] 4096
+    try {
+        while (($read = $reader.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            if (($builder.Length + $read) -gt $MaxChars) {
+                throw "Corpo da requisicao excede o limite permitido."
+            }
+            [void]$builder.Append($buffer, 0, $read)
+        }
+        return $builder.ToString()
+    }
+    finally {
+        $reader.Close()
+    }
+}
 
 function Write-JsonResponse {
     param(
@@ -43,6 +103,26 @@ function Write-JsonResponse {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
     $Response.StatusCode = $StatusCode
     $Response.ContentType = "application/json; charset=utf-8"
+    $Response.ContentLength64 = $bytes.Length
+    $Response.OutputStream.Write($bytes, 0, $bytes.Length)
+    $Response.Close()
+}
+
+function Write-FileResponse {
+    param(
+        [System.Net.HttpListenerResponse] $Response,
+        [string] $Path,
+        [string] $ContentType
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        Write-JsonResponse -Response $Response -Payload @{ success = $false; output = "Arquivo nao encontrado." } -StatusCode 404
+        return
+    }
+
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    $Response.StatusCode = 200
+    $Response.ContentType = $ContentType
     $Response.ContentLength64 = $bytes.Length
     $Response.OutputStream.Write($bytes, 0, $bytes.Length)
     $Response.Close()
@@ -105,11 +185,18 @@ function Get-ActiveJobCount {
 }
 
 function New-CommandJob {
-    param([string] $CommandText)
+    param(
+        [string] $CommandText,
+        [string] $ProjectPath
+    )
 
-    $job = Start-Job -ArgumentList $CommandText -ScriptBlock {
-        param([string] $IncomingCommand)
+    $job = Start-Job -ArgumentList $CommandText, $ProjectPath -ScriptBlock {
+        param(
+            [string] $IncomingCommand,
+            [string] $IncomingProjectPath
+        )
         $ErrorActionPreference = "Continue"
+        $env:MESTRE_PROJETO_PATH = $IncomingProjectPath
         try {
             $output = Invoke-Expression $IncomingCommand *>&1 | Out-String
             $success = $true
@@ -214,16 +301,35 @@ try {
         $req = $context.Request
         $res = $context.Response
 
-        # CORS -- permite o HTML local chamar a API
-        $res.Headers.Add("Access-Control-Allow-Origin", "*")
-        $res.Headers.Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-        $res.Headers.Add("Access-Control-Allow-Headers", "Content-Type")
-        $res.ContentType = "application/json; charset=utf-8"
+        try {
+            Set-ResponseSecurityHeaders -Request $req -Response $res
+            $res.ContentType = "application/json; charset=utf-8"
 
         # Preflight OPTIONS
         if ($req.HttpMethod -eq "OPTIONS") {
-            $res.StatusCode = 200
+            if ([string]$req.Headers["Origin"] -ne $BASE_URL) {
+                $res.StatusCode = 403
+            } else {
+                $res.StatusCode = 204
+            }
             $res.Close()
+            continue
+        }
+
+        # GET / — interface V10 servida na mesma origem do launcher.
+        if ($req.HttpMethod -eq "GET" -and $req.Url.AbsolutePath -in @("/", "/index.html")) {
+            $res.Headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+            Write-FileResponse -Response $res -Path $V10_HTML -ContentType "text/html; charset=utf-8"
+            continue
+        }
+
+        if ($req.HttpMethod -eq "GET" -and $req.Url.AbsolutePath -eq "/favicon.png") {
+            Write-FileResponse -Response $res -Path (Join-Path $PROJECT_DIR "favicon.png") -ContentType "image/png"
+            continue
+        }
+
+        if ($req.HttpMethod -eq "GET" -and $req.Url.AbsolutePath -eq "/logo-mestre-v7-transparent.png") {
+            Write-FileResponse -Response $res -Path (Join-Path $PROJECT_DIR "logo-mestre-v7-transparent.png") -ContentType "image/png"
             continue
         }
 
@@ -273,6 +379,10 @@ try {
 
         # POST /open-terminal — abre um terminal no mesmo contexto elevado do launcher
         if ($req.HttpMethod -eq "POST" -and $req.Url.AbsolutePath -eq "/open-terminal") {
+            if (-not (Test-PrivilegedClient -Request $req)) {
+                Write-JsonResponse -Response $res -Payload @{ success = $false; output = "Cliente nao autorizado." } -StatusCode 403
+                continue
+            }
             try {
                 $terminalExe = Get-TerminalExecutable
                 $workingDir = Split-Path -Parent $scriptPath
@@ -302,10 +412,17 @@ try {
 
         # POST /run — recebe e agenda a execucao do comando
         if ($req.HttpMethod -eq "POST" -and $req.Url.AbsolutePath -eq "/run") {
+            if (-not (Test-PrivilegedClient -Request $req)) {
+                Write-JsonResponse -Response $res -Payload @{ success = $false; output = "Cliente nao autorizado."; state = "forbidden" } -StatusCode 403
+                continue
+            }
             try {
-                $reader = New-Object System.IO.StreamReader($req.InputStream)
-                $rawBody = $reader.ReadToEnd()
-                $reader.Close()
+                if ((Get-ActiveJobCount) -ge $MaxConcurrentJobs) {
+                    Write-JsonResponse -Response $res -Payload @{ success = $false; output = "Limite de comandos simultaneos atingido."; state = "busy" } -StatusCode 429
+                    continue
+                }
+
+                $rawBody = Read-LimitedRequestBody -Request $req
                 $data = $rawBody | ConvertFrom-Json
                 $cmd = [string]$data.cmd
 
@@ -318,7 +435,7 @@ try {
                 Write-Host $cmd.Split("`n")[0] -ForegroundColor White
                 Write-Host ""
 
-                $entry = New-CommandJob -CommandText $cmd
+                $entry = New-CommandJob -CommandText $cmd -ProjectPath $PROJECT_DIR
                 $CommandJobs[$entry.Id] = $entry
                 Write-JsonResponse -Response $res -Payload ([ordered]@{
                     success = $true
@@ -358,11 +475,13 @@ try {
 
         # POST /ollama/chat — proxy com streaming NDJSON para o Ollama
         if ($req.HttpMethod -eq "POST" -and $req.Url.AbsolutePath -eq "/ollama/chat") {
+            if (-not (Test-PrivilegedClient -Request $req)) {
+                Write-JsonResponse -Response $res -Payload @{ success = $false; output = "Cliente nao autorizado." } -StatusCode 403
+                continue
+            }
             $streamingStarted = $false
             try {
-                $reader = New-Object System.IO.StreamReader($req.InputStream)
-                $rawBody = $reader.ReadToEnd()
-                $reader.Close()
+                $rawBody = Read-LimitedRequestBody -Request $req -MaxChars 2097152
                 $client = New-Object System.Net.Http.HttpClient
                 $client.Timeout = [System.Threading.Timeout]::InfiniteTimeSpan
                 $content = New-Object System.Net.Http.StringContent($rawBody, [System.Text.Encoding]::UTF8, "application/json")
@@ -433,6 +552,27 @@ try {
         $res.ContentLength64 = $nb.Length
         $res.OutputStream.Write($nb, 0, $nb.Length)
         $res.Close()
+        }
+        catch {
+            # Uma aba fechada/recarregada pode encerrar o socket enquanto a
+            # resposta esta sendo escrita. A falha pertence somente a esta
+            # requisicao e nao deve derrubar o launcher inteiro.
+            Write-Host "  [WARN] Falha ao processar $($req.HttpMethod) $($req.Url.AbsolutePath): $($_.Exception.Message)" -ForegroundColor Yellow
+            try {
+                if ($res.OutputStream.CanWrite) {
+                    Write-JsonResponse -Response $res -Payload @{
+                        success = $false
+                        output = "Falha ao processar a requisicao."
+                    } -StatusCode 500
+                }
+                else {
+                    $res.Close()
+                }
+            }
+            catch {
+                try { $res.Close() } catch {}
+            }
+        }
     }
 }
 catch [System.Net.HttpListenerException] {
@@ -441,7 +581,7 @@ catch [System.Net.HttpListenerException] {
     }
 }
 catch {
-    # Captura qualquer outra excecao para nao derrubar o servidor
+    # Falhas fora do ciclo de requisicoes sao fatais para o listener.
     Write-Host "  [ERRO INESPERADO] $($_.Exception.Message)" -ForegroundColor Red
 }
 finally {

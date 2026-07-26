@@ -11,7 +11,8 @@ This supplements the root `AGENTS.md` with a repo-local ECC baseline.
 ## MCP Baseline
 
 Treat `.codex/config.toml` as the default ECC-safe baseline for work in this repository.
-The generated baseline enables GitHub, Context7, Exa, Memory, Playwright, and Sequential Thinking.
+The generated baseline enables Context7, Exa, Memory, Playwright, and Sequential Thinking.
+GitHub access should use the connected GitHub app; the old npm GitHub MCP is deprecated.
 
 ## Multi-Agent Support
 

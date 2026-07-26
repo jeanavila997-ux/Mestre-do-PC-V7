@@ -4,10 +4,10 @@ title Mestre do PC V10 - Bootstrap
 
 set "TASK_NAME=MestreDoPC_Admin_Launcher"
 set "BASE_DIR=%~dp0"
-set "HTML_PATH=%BASE_DIR%index.html"
+set "APP_URL=http://127.0.0.1:7777/"
 
-if not exist "%HTML_PATH%" (
-    echo [ERRO] HTML da V10 nao encontrado em "%HTML_PATH%".
+if not exist "%BASE_DIR%index.html" (
+    echo [ERRO] HTML da V10 nao encontrado em "%BASE_DIR%index.html".
     timeout /t 3 /nobreak >nul
     exit /b 1
 )
@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 
 :openHtml
 echo [OK] Launcher saudavel. Abrindo interface V10...
-start "" "%HTML_PATH%"
+start "" "%APP_URL%"
 exit /b 0
 
 :checkHealth

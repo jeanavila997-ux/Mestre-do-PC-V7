@@ -1,62 +1,56 @@
-# Servidor MCP do Mestre do PC V7
+# MCP do Mestre do PC V10
 
-Este servidor permite que IAs como o **Claude Desktop** executem comandos de limpeza, diagnóstico e otimização **diretamente no seu computador** via MCP (Model Context Protocol).
+Servidor MCP por `stdio` que publica 33 ferramentas de diagnóstico e manutenção.
+Comandos administrativos são encaminhados ao launcher local em
+`http://127.0.0.1:7777`; consultas de IA usam o Ollama diretamente.
 
-## Pré-requisitos
+## Instalar e testar
 
-1. **Node.js** — [nodejs.org](https://nodejs.org/)
-2. **MestreDoPC-Launcher.ps1** rodando como Administrador (porta 7777)
-
-## Instalar Dependências
-
-```bash
-cd mcp-server
-npm install
+```powershell
+npm ci
+npm test
+node --check index.js
 ```
 
-## Configurar no Claude Desktop
+Normalmente o Claude Desktop ou Codex inicia `index.js`; não é necessário manter
+`npm start` aberto manualmente.
 
-Abra `%APPDATA%\Claude\claude_desktop_config.json` e adicione:
+## Variáveis de ambiente
+
+| Variável | Padrão | Uso |
+|---|---|---|
+| `MESTRE_BASE_URL` | `http://127.0.0.1:7777` | Launcher administrativo |
+| `MESTRE_PROJETO_PATH` | Diretório do launcher | Diretório usado pelas ferramentas Git/logs |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | API do Ollama |
+| `OLLAMA_MODEL` | `qwen2.5-coder:1.5b` | Modelo padrão |
+
+## Claude Desktop
 
 ```json
 {
   "mcpServers": {
     "mestre_do_pc": {
       "command": "node",
-      "args": ["C:\\MestreDoPC_V7\\mcp-server\\index.js"],
+      "args": ["C:\\caminho\\MestreDoPC_V7_clone\\mcp-server\\index.js"],
       "env": {
-        "MESTRE_PROJETO_PATH": "C:\\MestreDoPC_V7"
+        "MESTRE_PROJETO_PATH": "C:\\caminho\\MestreDoPC_V7_clone"
       }
     }
   }
 }
 ```
 
-> Substitua `C:\\MestreDoPC_V7` pelo caminho real de instalação. Use `\\` (barras duplas) no JSON.
+O MCP identifica suas requisições administrativas com `X-Mestre-Client: mcp`;
+chamadas HTTP genéricas ao launcher são recusadas.
 
-Reinicie o Claude Desktop. Um ícone de "Ferramentas" confirmará a conexão.
+## Auditoria de dependências
 
-## Variáveis de Ambiente
+Em 2026-07-26, o SDK MCP foi atualizado para `1.29.0` (versão mais recente no
+registro) e as dependências transitivas compatíveis receberam versões
+corrigidas por `overrides`.
 
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `MESTRE_PROJETO_PATH` | `C:\MestreDoPC_V7` | Pasta do projeto para comandos `git status`/`git pull` |
-
-## Ferramentas Disponíveis
-
-- **Limpeza** — TEMP, lixeira, cache WU, prefetch, DNS, logs de eventos
-- **RAM** — uso atual, liberar memória, listar processos
-- **Disco** — espaço, saúde SMART, desfragmentar, TRIM SSD
-- **Rede** — diagnóstico, flush DNS, renovar IP, reset TCP/IP
-- **Reparo** — SFC scannow, DISM RestoreHealth, reparar WU
-- **Segurança** — Windows Defender, firewall, scan rápido/completo
-- **Processos** — encerrar por nome, reiniciar Explorer
-- **IA** — perguntar ao Ollama, analisar logs com IA
-
-## Exemplos de Uso no Claude
-
-- *"Qual o uso de memória RAM agora?"*
-- *"Faça uma limpeza rápida no sistema"*
-- *"Encerre o processo chrome"*
-- *"Analise os logs de erro e diga o que está errado"*
-- *"Faça um diagnóstico completo do PC"*
+`npm audit --omit=dev` ainda informa dois registros moderados que representam a
+mesma vulnerabilidade em `@hono/node-server` (`serveStatic` no Windows). O
+servidor do MestreDoPC usa transporte `stdio` e não importa nem publica essa
+rota. A correção disponível exige forçar uma versão principal que o SDK MCP
+ainda não declara compatível; por isso ela não foi aplicada automaticamente.

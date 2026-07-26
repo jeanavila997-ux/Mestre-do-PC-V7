@@ -1,62 +1,38 @@
-# Servidor MCP do Mestre do PC V7
+# Mestre do PC V10
 
-Este servidor permite que IAs como o **Claude Desktop** executem comandos de limpeza, diagnóstico e otimização **diretamente no seu computador** via MCP (Model Context Protocol).
+Aplicativo local de diagnóstico e manutenção do Windows com interface web,
+launcher PowerShell elevado, integração Ollama e servidor MCP para Claude/Codex.
 
-## Pré-requisitos
+## Instalação no Windows
 
-1. **Node.js** — [nodejs.org](https://nodejs.org/)
-2. **MestreDoPC-Launcher.ps1** rodando como Administrador (porta 7777)
+1. Instale Node.js LTS e Ollama.
+2. Execute `INSTALAR.bat`.
+3. Abra o atalho **Mestre do PC**.
 
-## Instalar Dependências
+O instalador registra o launcher como tarefa agendada, instala as dependências
+de `mcp-server/`, configura o MCP e cria os atalhos da V10.
 
-```bash
+## Arquitetura
+
+- `v10/index.html`: interface ativa.
+- `MestreDoPC-Launcher.ps1`: servidor administrativo em
+  `http://127.0.0.1:7777`.
+- `mcp-server/index.js`: servidor MCP por `stdio`.
+- Ollama: API local em `http://127.0.0.1:11434`.
+- `legado/`: versões V7, V8 e V9 arquivadas.
+
+A interface deve ser aberta pelo atalho ou por `v10\start-v10.bat`. O launcher
+serve a página na mesma origem e protege os endpoints administrativos contra
+chamadas de páginas externas.
+
+## Desenvolvimento
+
+```powershell
 cd mcp-server
-npm install
+npm ci
+npm test
+node --check index.js
 ```
 
-## Configurar no Claude Desktop
-
-Abra `%APPDATA%\Claude\claude_desktop_config.json` e adicione:
-
-```json
-{
-  "mcpServers": {
-    "mestre_do_pc": {
-      "command": "node",
-      "args": ["C:\\MestreDoPC_V7\\mcp-server\\index.js"],
-      "env": {
-        "MESTRE_PROJETO_PATH": "C:\\MestreDoPC_V7"
-      }
-    }
-  }
-}
-```
-
-> Substitua `C:\\MestreDoPC_V7` pelo caminho real de instalação. Use `\\` (barras duplas) no JSON.
-
-Reinicie o Claude Desktop. Um ícone de "Ferramentas" confirmará a conexão.
-
-## Variáveis de Ambiente
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `MESTRE_PROJETO_PATH` | `C:\MestreDoPC_V7` | Pasta do projeto para comandos `git status`/`git pull` |
-
-## Ferramentas Disponíveis
-
-- **Limpeza** — TEMP, lixeira, cache WU, prefetch, DNS, logs de eventos
-- **RAM** — uso atual, liberar memória, listar processos
-- **Disco** — espaço, saúde SMART, desfragmentar, TRIM SSD
-- **Rede** — diagnóstico, flush DNS, renovar IP, reset TCP/IP
-- **Reparo** — SFC scannow, DISM RestoreHealth, reparar WU
-- **Segurança** — Windows Defender, firewall, scan rápido/completo
-- **Processos** — encerrar por nome, reiniciar Explorer
-- **IA** — perguntar ao Ollama, analisar logs com IA
-
-## Exemplos de Uso no Claude
-
-- *"Qual o uso de memória RAM agora?"*
-- *"Faça uma limpeza rápida no sistema"*
-- *"Encerre o processo chrome"*
-- *"Analise os logs de erro e diga o que está errado"*
-- *"Faça um diagnóstico completo do PC"*
+Consulte [docs/INSTALACAO-CLIENTE.md](docs/INSTALACAO-CLIENTE.md) para o guia
+completo.

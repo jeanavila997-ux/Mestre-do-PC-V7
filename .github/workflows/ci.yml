@@ -10,36 +10,50 @@ jobs:
   build-and-test:
     runs-on: windows-latest
 
-    defaults:
-      run:
-        working-directory: MestreDoPC-V7
-
-    strategy:
-      matrix:
-        node-version: ['20.x']
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '24.x'
           cache: 'npm'
-          cache-dependency-path: MestreDoPC-V7/package-lock.json
+          cache-dependency-path: mcp-server/package-lock.json
 
-      - name: Install dependencies
+      - name: Install MCP dependencies
+        working-directory: mcp-server
         run: npm ci
 
-      - name: Run linter
-        run: npm run lint
-
-      - name: Run TypeScript type check
-        run: npm run typecheck
-
-      - name: Run tests
+      - name: Run Node tests
+        working-directory: mcp-server
         run: npm test
 
-      - name: Build project
-        run: npm run build
+      - name: Validate JavaScript syntax
+        shell: pwsh
+        run: |
+          node --check mcp-server/index.js
+          node --check mcp-server/security.js
+          node --check v10/launcher.js
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $files = @(
+            "MestreDoPC-Launcher.ps1",
+            "install.ps1",
+            "Register-MestreTask.ps1",
+            "startup/MestreDoPC-Startup.ps1"
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $PWD $file),
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              throw "$file possui erro de sintaxe: $($errors.Message -join '; ')"
+            }
+          }

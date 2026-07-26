@@ -7,7 +7,10 @@
     "explanations": true
   },
   "domains": [
-    "typescript"
+    "javascript",
+    "powershell",
+    "mcp",
+    "ollama"
   ],
   "suggestedBy": "ecc-tools-repo-analysis",
   "createdAt": "2026-05-24T21:28:20.444Z"
