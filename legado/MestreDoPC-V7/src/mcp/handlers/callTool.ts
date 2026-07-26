@@ -26,7 +26,7 @@ export async function handleCallTool(request: CallToolRequest): Promise<{ conten
   }
 
   try {
-    const rawArgs = (args && typeof args === 'object') ? (args as Record<string, unknown>) : {};
+    const rawArgs = (args && typeof args === 'object') ? args : {};
     const rawParams =
       'params' in rawArgs && rawArgs.params && typeof rawArgs.params === 'object'
         ? (rawArgs.params as Record<string, unknown>)
