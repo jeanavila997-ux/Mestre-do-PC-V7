@@ -5,8 +5,8 @@ uninstall.log
 logs/
 
 # Node
-mcp-server/node_modules/
-v8-refatorado/mcp-server/node_modules/
+node_modules/
+**/node_modules/
 npm-debug.log*
 
 # Auditoria (gerada, nao versionada)
@@ -26,3 +26,4 @@ settings.local.json
 
 # Worktrees internos do Claude Code (outros repos)
 .claude/worktrees/
+pwa-starter/

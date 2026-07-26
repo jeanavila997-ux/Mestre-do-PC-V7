@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 
 
 
@@ -7855,6 +7855,7 @@
 
 
             <span class="ia-status" id="iaStatus">Verificando conexão...</span>
+            <select id="ollamaModelSelect" onchange="selectedOllamaModel=this.value" style="margin-left:12px;padding:4px 10px;border-radius:6px;background:#0d1117;color:#00ff88;border:1px solid #00ff88;font-size:0.85rem;outline:none;max-width:240px;"></select>
 
 
 
@@ -22129,6 +22130,11 @@ COMANDOS QUE VOCÊ CONHECE:
 
 
             selectedOllamaModel = chooseOllamaModel(models);
+            const sel = document.getElementById("ollamaModelSelect");
+            if (sel) {
+              sel.innerHTML = models.map(m => '<option value="' + m + '"' + (m === selectedOllamaModel ? ' selected' : '') + '>' + m + '</option>').join('');
+              sel.style.display = 'inline-block';
+            }
             status.textContent = "🟢 Conectado — Modelo: " + selectedOllamaModel;
 
 

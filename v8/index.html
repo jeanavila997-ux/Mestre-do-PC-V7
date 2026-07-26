@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mestre do PC V8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+:root{
+  --bg-primary:#0a0e14; --bg-secondary:#111827; --bg-tertiary:#1a2332;
+  --bg-card:rgba(26,35,50,0.8);
+  --accent-primary:#ff6b35; --accent-secondary:#ff9f1c; --accent-cool:#00b4d8;
+  --text-primary:#f0f4f8; --text-secondary:#94a3b8; --text-muted:#64748b;
+  --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
+  --border-subtle:rgba(148,163,184,0.08);
+  --border-medium:rgba(148,163,184,0.15);
+  --border-accent:rgba(255,107,53,0.3);
+  --glow-orange:rgba(255,107,53,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'JetBrains Mono',monospace;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(255,107,53,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(0,180,216,0.04) 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  color:var(--text-primary); min-height:100vh; overflow-x:hidden;
+}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg-secondary);border-radius:4px}
+::-webkit-scrollbar-thumb{background:var(--border-medium);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-primary)}
+
+.header{
+  position:fixed; top:0;left:0;right:0; z-index:1000;
+  padding:16px 32px; background:rgba(10,14,20,0.8);
+  backdrop-filter:blur(20px); border-bottom:1px solid var(--border-subtle);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.logo{font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;color:var(--accent-primary);letter-spacing:0.05em;text-transform:uppercase}
+.logo span{color:var(--text-primary)}
+.header-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.status-badge{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:50px;font-size:0.75rem;color:var(--text-secondary)}
+.status-dot{width:8px;height:8px;background:var(--success);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+.status-dot.off{background:var(--danger);animation:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}
+.btn{padding:10px 20px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:var(--bg-primary);border:none;border-radius:10px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:0.05em;cursor:pointer;transition:all 0.3s ease;text-transform:uppercase}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px var(--glow-orange)}
+.btn.secondary{background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-medium)}
+.btn.secondary:hover{border-color:var(--accent-primary);box-shadow:0 0 20px var(--glow-orange)}
+
+.main{margin-top:80px;padding:32px;max-width:1400px;margin-left:auto;margin-right:auto}
+.hero{background:var(--bg-card);border:1px solid var(--border-subtle);border-top:1px solid var(--border-medium);border-radius:20px;padding:32px;margin-bottom:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05);backdrop-filter:blur(12px)}
+.hero-title{font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center}
+.hero-title button{font-size:0.7rem;padding:6px 12px}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px}
+.metric-card{background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:14px;padding:20px;transition:all 0.3s ease}
+.metric-card:hover{border-color:var(--border-accent);box-shadow:0 0 30px var(--glow-orange);transform:translateY(-2px)}
+.metric-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:12px}
+.metric-value{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:600;color:var(--accent-primary);letter-spacing:-0.05em}
+.metric-label{font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px}
+.progress-bar{height:4px;background:var(--bg-secondary);border-radius:2px;overflow:hidden;margin-top:12px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent-primary),var(--accent-secondary));border-radius:2px;box-shadow:0 0 10px var(--glow-orange);transition:width 0.6s ease}
+
+.section-title{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:600;color:var(--text-primary);margin:24px 0 24px;display:flex;align-items:center;gap:12px}
+.section-title::before{content:'';width:4px;height:24px;background:linear-gradient(180deg,var(--accent-primary),var(--accent-secondary));border-radius:2px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:32px}
+.action-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-top:1px solid var(--border-medium);border-radius:16px;padding:24px;cursor:pointer;transition:all 0.4s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden}
+.action-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent-primary),var(--accent-secondary),transparent);transform:scaleX(0);transform-origin:left;transition:transform 0.4s ease}
+.action-card:hover::before{transform:scaleX(1)}
+.action-card:hover{transform:translateY(-4px) scale(1.02);border-color:var(--border-accent);box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 60px var(--glow-orange)}
+.action-card.running{opacity:0.7;pointer-events:none}
+.action-card-icon{width:48px;height:48px;background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:16px}
+.action-card-title{font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:600;color:var(--text-primary);margin-bottom:8px}
+.action-card-desc{font-size:0.8rem;color:var(--text-secondary);line-height:1.6}
+
+.terminal{background:#0d1117;border:1px solid var(--border-subtle);border-radius:16px;padding:20px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;max-height:300px;overflow-y:auto}
+.terminal-header{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);position:sticky;top:0;background:#0d1117}
+.terminal-dot{width:12px;height:12px;border-radius:50%}
+.terminal-dot.red{background:#ff5f56}.terminal-dot.yellow{background:#ffbd2e}.terminal-dot.green{background:#27ca40}
+.terminal-title{color:var(--text-muted);font-size:0.75rem;margin-left:8px}
+.terminal-actions{margin-left:auto;display:flex;gap:8px}
+.terminal-actions button{background:none;border:1px solid var(--border-medium);color:var(--text-muted);border-radius:6px;padding:2px 8px;font-size:0.7rem;cursor:pointer;font-family:inherit}
+.terminal-actions button:hover{border-color:var(--accent-primary);color:var(--accent-primary)}
+.log-entry{margin-bottom:8px;display:flex;gap:12px}
+.log-time{color:var(--text-muted);font-size:0.7rem;flex-shrink:0}
+.log-success{color:var(--success)} .log-info{color:var(--accent-cool)} .log-warning{color:var(--warning)} .log-error{color:var(--danger)}
+
+@keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.hero{animation:fadeInUp 0.6s ease-out 0.1s both}
+.cards-grid{animation:fadeInUp 0.6s ease-out 0.2s both}
+.terminal{animation:fadeInUp 0.6s ease-out 0.4s both}
+
+.scanline{position:fixed;top:0;left:0;right:0;height:100vh;background:linear-gradient(to bottom,transparent,rgba(255,107,53,0.02),transparent);animation:scanline 4s linear infinite;pointer-events:none;z-index:9999}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+
+.ia-fab{position:fixed;bottom:24px;right:24px;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border:none;cursor:pointer;font-size:1.8rem;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px var(--glow-orange);z-index:1100;transition:transform 0.3s ease}
+.ia-fab:hover{transform:scale(1.1) rotate(5deg)}
+.ia-fab.off{filter:grayscale(0.5);opacity:0.8}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-secondary);border:1px solid var(--border-accent);border-radius:20px;width:100%;max-width:600px;height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.modal-header h3{font-family:'Rajdhani',sans-serif;color:var(--accent-primary);font-size:1.1rem;flex:1;min-width:120px}
+.modal-header select{background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-medium);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:0.8rem;max-width:160px}
+.modal-header button.close{background:none;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;transition:color 0.2s}
+.modal-header button.close:hover{color:var(--danger)}
+.modal-warning{padding:8px 16px;background:rgba(245,158,11,0.1);color:var(--warning);font-size:0.75rem;border-bottom:1px solid var(--border-subtle);display:none}
+.modal-warning.show{display:block}
+.modal-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.msg{padding:10px 14px;border-radius:12px;max-width:85%;font-size:0.85rem;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:var(--bg-primary)}
+.msg.assistant{align-self:flex-start;background:var(--bg-tertiary);border:1px solid var(--border-subtle)}
+.msg.assistant code{background:var(--bg-primary);padding:1px 4px;border-radius:3px;font-size:0.8rem}
+.msg.assistant pre{background:var(--bg-primary);padding:10px;border-radius:8px;margin:6px 0;overflow-x:auto}
+.modal-footer{padding:12px 16px;border-top:1px solid var(--border-subtle);display:flex;gap:8px}
+.modal-footer textarea{flex:1;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-medium);border-radius:10px;padding:10px;font-family:inherit;font-size:0.85rem;resize:none;height:44px;max-height:120px}
+.modal-footer button{padding:0 20px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:var(--bg-primary);border:none;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.9rem}
+.modal-footer button:disabled{opacity:0.5;cursor:not-allowed}
+
+@media (max-width:640px){
+  .header{padding:12px 16px}
+  .logo{font-size:1.2rem}
+  .main{padding:16px;margin-top:72px}
+  .hero,.action-card,.terminal{padding:16px}
+  .metric-value{font-size:1.5rem}
+  .modal{height:90vh}
+}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+
+<header class="header">
+  <div class="logo">Mestre do <span>PC V8</span></div>
+  <div class="header-actions">
+    <div class="status-badge"><div class="status-dot" id="statusDot"></div><span id="statusText">Verificando...</span></div>
+    <button class="btn secondary" id="btnRefresh">↻ Atualizar</button>
+    <button class="btn" id="btnTerminal">🖥️ Terminal</button>
+  </div>
+</header>
+
+<main class="main">
+  <section class="hero">
+    <div class="hero-title">Status do Sistema em Tempo Real <button class="btn secondary" id="btnRefreshMetrics">Atualizar métricas</button></div>
+    <div class="metrics-grid" id="metricsGrid"></div>
+  </section>
+
+  <h2 class="section-title">Otimização</h2>
+  <div class="cards-grid" id="optGrid"></div>
+
+  <h2 class="section-title">Ferramentas</h2>
+  <div class="cards-grid" id="toolsGrid"></div>
+
+  <h2 class="section-title">Log de Atividades</h2>
+  <div class="terminal">
+    <div class="terminal-header">
+      <div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div>
+      <span class="terminal-title">mestre-do-pc — logs</span>
+      <div class="terminal-actions"><button id="btnClearLogs">limpar</button></div>
+    </div>
+    <div id="logList"></div>
+  </div>
+</main>
+
+<button class="ia-fab" id="iaFab" title="Chat IA Ollama">🤖</button>
+
+<div class="modal-overlay" id="iaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🤖 IA Local (Ollama)</h3>
+      <select id="modelSelect"><option value="">carregando...</option></select>
+      <button class="close" id="iaClose">×</button>
+    </div>
+    <div class="modal-warning" id="iaWarning">⚠️ Ollama offline. Inicie com `ollama serve` ou `start-v8.bat`.</div>
+    <div class="modal-body" id="iaBody"></div>
+    <div class="modal-footer">
+      <textarea id="iaInput" placeholder="Pergunte sobre manutenção do Windows... (Enter envia, Shift+Enter nova linha)"></textarea>
+      <button id="iaSend">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COMMANDS = {
+  opt: [
+    {id:'limpeza', icon:'🧹', title:'Limpeza Rápida', desc:'Remove arquivos temporários, limpa lixeira e cache do sistema.', cmd:'Remove-Item "$env:TEMP\\*" -Recurse -Force -EA 0; Remove-Item "C:\\Windows\\Temp\\*" -Recurse -Force -EA 0; Clear-RecycleBin -Force -EA 0; Write-Host "Limpeza concluida!" -ForegroundColor Green'},
+    {id:'ram', icon:'⚡', title:'Liberar RAM', desc:'Libera memória usando o Garbage Collector do .NET.', cmd:'[System.GC]::Collect(); [System.GC]::WaitForPendingFinalizers(); Write-Host "RAM liberada!" -ForegroundColor Green'},
+    {id:'reparar', icon:'🔧', title:'Reparar Sistema', desc:'Executa SFC e DISM para corrigir arquivos corrompidos.', cmd:'sfc /scannow; DISM /Online /Cleanup-Image /RestoreHealth'},
+  ],
+  tools: [
+    {id:'sfc', icon:'🛡️', title:'Windows Defender', desc:'Verifica status e executa scan rápido de segurança.', cmd:'Get-MpComputerStatus | Select-Object AMRunningMode,AntivirusEnabled,RealTimeProtectionEnabled | Format-List; Start-MpScan -ScanType QuickScan'},
+    {id:'rede', icon:'🌐', title:'Diagnóstico de Rede', desc:'Flush DNS, renova IP e testa conectividade.', cmd:'ipconfig /flushdns; ipconfig /release; ipconfig /renew; Test-Connection 8.8.8.8 -Count 2 | Format-Table -AutoSize'},
+    {id:'sysinfo', icon:'ℹ️', title:'Informações do Sistema', desc:'Lista nome, versão, arquitetura e processador.', cmd:'Get-ComputerInfo | Select-Object WindowsProductName,WindowsVersion,OsArchitecture,CsName,CsProcessors | Format-List'},
+    {id:'disc', icon:'💾', title:'Espaço em Disco', desc:'Mostra usado, livre e total de todos os discos.', cmd:'Get-PSDrive -PSProvider FileSystem | Select-Object Name,@{N="Usado(GB)";E={[math]::Round(($_.Used/1GB),2)}},@{N="Livre(GB)";E={[math]::Round(($_.Free/1GB),2)}},@{N="Total(GB)";E={[math]::Round((($_.Used+$_.Free)/1GB),2)}} | Format-Table -AutoSize'},
+  ],
+};
+
+const SYSTEM_PROMPT = `Você é o Mestre do PC, um assistente especializado em manutenção de computadores Windows. Responda SEMPRE em português brasileiro, de forma direta e objetiva. Quando sugerir uma ação, inclua o comando PowerShell exato entre crases. Use APENAS comandos PowerShell reais do Windows. Nunca invente comandos.`;
+
+const $ = s => document.querySelector(s);
+const logList = $('#logList');
+
+function nowTime(){return new Date().toLocaleTimeString('pt-BR',{hour12:false});}
+function log(msg, type='info'){
+  const e = document.createElement('div');
+  e.className = 'log-entry';
+  e.innerHTML = `<span class="log-time">${nowTime()}</span><span class="log-${type}">${msg}</span>`;
+  logList.prepend(e);
+  while (logList.children.length > 200) logList.lastChild.remove();
+}
+
+function renderCards(){
+  const make = (c, grid) => {
+    const card = document.createElement('div');
+    card.className = 'action-card';
+    card.dataset.cmd = c.cmd;
+    card.innerHTML = `<div class="action-card-icon">${c.icon}</div><div class="action-card-title">${c.title}</div><div class="action-card-desc">${c.desc}</div>`;
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      const rx = (y - r.height/2)/20, ry = (r.width/2 - x)/20;
+      card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-4px) scale(1.02)`;
+    });
+    card.addEventListener('mouseleave', () => card.style.transform = '');
+    card.addEventListener('click', () => runCommand(c.cmd, c.title, card));
+    grid.appendChild(card);
+  };
+  COMMANDS.opt.forEach(c => make(c, $('#optGrid')));
+  COMMANDS.tools.forEach(c => make(c, $('#toolsGrid')));
+}
+
+async function runCommand(cmd, label, card){
+  log(`▶️ ${label} iniciado...`, 'info');
+  if (card) card.classList.add('running');
+  try {
+    const r = await fetch('/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cmd})});
+    const d = await r.json();
+    if (!r.ok || !d.success){ log(`❌ ${label}: ${d.error||'rejeitado'}`, 'error'); if(card)card.classList.remove('running'); return; }
+    pollJob(d.jobId, label, card);
+  } catch(e){
+    log(`❌ ${label}: ${e.message}`, 'error');
+    if (card) card.classList.remove('running');
+  }
+}
+
+function pollJob(jobId, label, card){
+  const start = Date.now();
+  const tick = async () => {
+    try {
+      const r = await fetch(`/run-status?id=${encodeURIComponent(jobId)}`);
+      const d = await r.json();
+      if (d.state === 'completed'){
+        if (card) card.classList.remove('running');
+        const ok = d.exitCode === 0;
+        const preview = (d.output||'').slice(0,300).replace(/\n/g,' ');
+        log(`${ok?'✅':'❌'} ${label} (exit ${d.exitCode}) — ${preview||'(sem saída)'}`, ok?'success':'error');
+        return;
+      }
+      if (Date.now() - start > 5*60*1000){ log(`⏱️ ${label} timeout`, 'warning'); if(card)card.classList.remove('running'); return; }
+      setTimeout(tick, 1200);
+    } catch(e){
+      log(`❌ ${label} status: ${e.message}`, 'error');
+      if (card) card.classList.remove('running');
+    }
+  };
+  setTimeout(tick, 800);
+}
+
+async function checkPing(){
+  try {
+    const r = await fetch('/ping');
+    const d = await r.json();
+    const ok = r.ok && d.status === 'ok';
+    $('#statusDot').classList.toggle('off', !ok);
+    $('#statusText').textContent = ok ? (d.state === 'busy' ? 'Ocupado' : 'Sistema Online') : 'Offline';
+  } catch {
+    $('#statusDot').classList.add('off');
+    $('#statusText').textContent = 'Offline';
+  }
+}
+
+async function loadMetrics(){
+  const grid = $('#metricsGrid');
+  grid.innerHTML = '<div class="metric-card" style="opacity:0.5">carregando métricas...</div>';
+  try {
+    const r = await fetch('/status');
+    if (!r.ok) throw new Error('status '+r.status);
+    const d = await r.json();
+    const ramPct = d.ramTotal ? Math.max(0, Math.min(100, 100 - (d.ramFree/d.ramTotal*100))) : 0;
+    const diskPct = (d.diskUsed||d.diskFree) ? (d.diskUsed/(d.diskUsed+d.diskFree)*100) : 0;
+    const cpuPct = d.cpu != null ? d.cpu : 0;
+    const cards = [
+      {icon:'🖥️', value: d.cpu != null ? d.cpu.toFixed(0)+'%' : '—', label:'CPU', pct: cpuPct},
+      {icon:'📊', value: d.ramFree != null ? d.ramFree.toFixed(1)+' GB' : '—', label:'RAM Livre', pct: ramPct},
+      {icon:'💾', value: d.diskFree != null ? d.diskFree.toFixed(0)+' GB' : '—', label:'Disco Livre', pct: diskPct},
+      {icon:'🌡️', value: '—', label:'Temperatura', pct: 0},
+    ];
+    grid.innerHTML = cards.map(c => `
+      <div class="metric-card">
+        <div class="metric-icon">${c.icon}</div>
+        <div class="metric-value">${c.value}</div>
+        <div class="metric-label">${c.label}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${c.pct.toFixed(0)}%"></div></div>
+      </div>`).join('');
+    log('📊 Métricas atualizadas', 'info');
+  } catch(e){
+    grid.innerHTML = '<div class="metric-card" style="color:var(--danger)">Falha ao carregar métricas</div>';
+    log('❌ Métricas: '+e.message, 'error');
+  }
+}
+
+function openTerminal(){
+  runCommand('Write-Host "Mestre do PC V8 - Terminal pronto. Digite comandos PowerShell no card IA." -ForegroundColor Cyan; Get-Date', 'Terminal', null);
+}
+
+async function checkOllama(){
+  try {
+    const r = await fetch('/ollama/tags');
+    if (!r.ok) throw new Error('ollama offline');
+    const d = await r.json();
+    const models = (d.models||[]).map(m => m.name || m.model);
+    const sel = $('#modelSelect');
+    if (models.length === 0){
+      sel.innerHTML = '<option value="">nenhum modelo — baixe um</option>';
+    } else {
+      sel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+    $('#iaFab').classList.remove('off');
+    $('#iaWarning').classList.remove('show');
+    return models;
+  } catch {
+    $('#iaFab').classList.add('off');
+    $('#iaWarning').classList.add('show');
+    $('#modelSelect').innerHTML = '<option value="">ollama offline</option>';
+    return null;
+  }
+}
+
+function escapeHtml(s){return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function renderMarkdown(text){
+  let html = escapeHtml(text);
+  html = html.replace(/```([\s\S]*?)```/g, (m,c) => `<pre><code>${c}</code></pre>`);
+  html = html.replace(/`([^`]+)`/g, (m,c) => `<code>${c}</code>`);
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/^\s*[-*]\s+(.*)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+  return html;
+}
+
+function addMsg(role, text){
+  const body = $('#iaBody');
+  const m = document.createElement('div');
+  m.className = 'msg ' + role;
+  m.innerHTML = role === 'assistant' ? renderMarkdown(text) : escapeHtml(text);
+  body.appendChild(m);
+  body.scrollTop = body.scrollHeight;
+  return m;
+}
+
+async function sendChat(){
+  const input = $('#iaInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const model = $('#modelSelect').value;
+  if (!model){ addMsg('assistant', '⚠️ Selecione um modelo ou inicie o Ollama primeiro.'); return; }
+  input.value = '';
+  addMsg('user', text);
+  const asstEl = addMsg('assistant', '');
+  let acc = '';
+  $('#iaSend').disabled = true;
+  try {
+    const r = await fetch('/ollama/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model,
+        stream:true,
+        messages:[
+          {role:'system', content:SYSTEM_PROMPT},
+          {role:'user', content:text},
+        ],
+      }),
+    });
+    if (!r.ok){ const e = await r.text(); asstEl.innerHTML = renderMarkdown('Erro: '+e); return; }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true){
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines){
+        if (!line.trim()) continue;
+        try {
+          const j = JSON.parse(line);
+          if (j.message && j.message.content){ acc += j.message.content; asstEl.innerHTML = renderMarkdown(acc); $('#iaBody').scrollTop = $('#iaBody').scrollHeight; }
+          if (j.error){ asstEl.innerHTML = renderMarkdown('Erro: '+j.error); break; }
+        } catch{}
+      }
+    }
+    if (!acc) asstEl.innerHTML = renderMarkdown('(sem resposta)');
+  } catch(e){
+    asstEl.innerHTML = renderMarkdown('Erro: '+e.message);
+  } finally {
+    $('#iaSend').disabled = false;
+    input.focus();
+  }
+}
+
+function init(){
+  renderCards();
+  checkPing(); setInterval(checkPing, 10000);
+  loadMetrics();
+  log('🚀 Mestre do PC V8 inicializado', 'info');
+  log('ℹ️ Chat Ollama ativo por padrão — clique em 🤖', 'info');
+  checkOllama();
+
+  $('#btnRefresh').addEventListener('click', () => { checkPing(); loadMetrics(); });
+  $('#btnRefreshMetrics').addEventListener('click', loadMetrics);
+  $('#btnTerminal').addEventListener('click', openTerminal);
+  $('#btnClearLogs').addEventListener('click', () => logList.innerHTML = '');
+
+  $('#iaFab').addEventListener('click', () => {
+    $('#iaModal').classList.add('open');
+    checkOllama();
+    $('#iaInput').focus();
+  });
+  $('#iaClose').addEventListener('click', () => $('#iaModal').classList.remove('open'));
+  $('#iaModal').addEventListener('click', e => { if (e.target === $('#iaModal')) $('#iaModal').classList.remove('open'); });
+  $('#iaSend').addEventListener('click', sendChat);
+  $('#iaInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); } });
+}
+init();
+</script>
+</body>
+</html>

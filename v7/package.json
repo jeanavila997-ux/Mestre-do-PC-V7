@@ -1,0 +1,9 @@
+{
+  "name": "mestre-do-pc-v7",
+  "version": "7.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node launcher.js"
+  }
+}

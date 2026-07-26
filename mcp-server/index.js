@@ -410,11 +410,11 @@ const mestreTools = {
 
 
 
-    description: "Testa o modelo qwen3-coder-next:cloud no endpoint local de chat do Ollama.",
+    description: "Testa o modelo glm-5.2:cloud no endpoint local de chat do Ollama.",
 
 
 
-    command: `$model="qwen3-coder-next:cloud"; try { $body=@{model=$model;messages=@(@{role="user";content="Responda somente OK"});stream=$false} | ConvertTo-Json -Depth 6; $res=Invoke-RestMethod -Uri "http://localhost:11434/api/chat" -Method POST -ContentType "application/json" -Body $body -TimeoutSec 30; Write-Host "Modelo testado: $model" -ForegroundColor Cyan; if($res.message.content){ Write-Host $res.message.content -ForegroundColor Green } else { Write-Host "Ollama respondeu, mas sem conteudo de chat." -ForegroundColor Yellow } } catch { Write-Host "Falha no teste do Ollama/modelo. Talvez o modelo nao suporte chat ou esteja offline." -ForegroundColor Yellow; Write-Host $_.Exception.Message }`,
+    command: `$model="glm-5.2:cloud"; try { $body=@{model=$model;messages=@(@{role="user";content="Responda somente OK"});stream=$false} | ConvertTo-Json -Depth 6; $res=Invoke-RestMethod -Uri "http://localhost:11434/api/chat" -Method POST -ContentType "application/json" -Body $body -TimeoutSec 30; Write-Host "Modelo testado: $model" -ForegroundColor Cyan; if($res.message.content){ Write-Host $res.message.content -ForegroundColor Green } else { Write-Host "Ollama respondeu, mas sem conteudo de chat." -ForegroundColor Yellow } } catch { Write-Host "Falha no teste do Ollama/modelo. Talvez o modelo nao suporte chat ou esteja offline." -ForegroundColor Yellow; Write-Host $_.Exception.Message }`,
 
 
 
@@ -500,7 +500,7 @@ const mestreTools = {
 
 const OLLAMA_URL = "http://localhost:11434";
 
-const OLLAMA_MODEL = "qwen2.5:1.5b";
+const OLLAMA_MODEL = "qwen2.5-coder:1.5b";
 
 const OLLAMA_SYSTEM_PROMPT = `Você é o Mestre do PC, um assistente especializado em manutenção de computadores Windows.
 

@@ -18,7 +18,7 @@ $OllamaExe  = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
 $OllamaApi  = "http://localhost:11434"
 $LauncherTask = "MestreDoPC_Admin_Launcher"
 $MestreApi  = "http://127.0.0.1:7777"
-$Model      = "gemma4:27b"                 # tag local do gemma4:31b-cloud
+$Model      = "glm-5.2:cloud"               # cloud (ollama.com), maior contexto/capacidade
 
 function Log {
     param([string] $msg)
