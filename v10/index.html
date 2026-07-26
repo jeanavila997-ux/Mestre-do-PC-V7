@@ -725,7 +725,10 @@
         a.className = "nav-item";
         a.textContent = c.label;
         a.onclick = () => {
-          document.getElementById(c.id).scrollIntoView({ behavior: "smooth" });
+          const cat = document.getElementById(c.id);
+          // Centraliza a categoria na viewport enquanto compacta, depois expande
+          cat.scrollIntoView({ behavior: "smooth", block: "center" });
+          cat.classList.add("active");
           nav.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
           a.classList.add("active");
         };
