@@ -738,7 +738,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     } catch (e) {
 
-      if (e.name === "AbortError") return { isError: true, content: [{ type: "text", text: "⏱️ Timeout ao analisar logs (30s). Ollama pode estar sobrecarregado." }] };
+      if (e.name === "AbortError" || e.name === "TimeoutError") return { isError: true, content: [{ type: "text", text: "⏱️ Timeout ao analisar logs (30s). Ollama pode estar sobrecarregado." }] };
 
       return { isError: true, content: [{ type: "text", text: "Falha na análise: " + e.message }] };
 
@@ -790,7 +790,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     } catch (error) {
 
-      if (error.name === "AbortError") return { isError: true, content: [{ type: "text", text: "⏱️ Timeout: Ollama demorou mais de 15s para responder. Tente novamente." }] };
+      if (error.name === "AbortError" || error.name === "TimeoutError") return { isError: true, content: [{ type: "text", text: "⏱️ Timeout: Ollama demorou mais de 15s para responder. Tente novamente." }] };
 
       return { isError: true, content: [{ type: "text", text: `Falha no Ollama: ${error.message}` }] };
 
@@ -869,7 +869,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   } catch (error) {
 
-    if (error.name === "AbortError") {
+    if (error.name === "AbortError" || error.name === "TimeoutError") {
 
       return { isError: true, content: [{ type: "text", text: "⏱️ Timeout: O comando demorou mais de 10s. Verifique se o Launcher está rodando na porta 7777." }] };
 
