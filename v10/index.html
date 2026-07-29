@@ -546,6 +546,8 @@
           ["Ver Adaptadores de Rede", "Get-NetAdapter | Select-Object Name,Status,LinkSpeed,MacAddress | Format-Table -AutoSize"],
           ["Testar DNS", "Resolve-DnsName google.com; Resolve-DnsName cloudflare.com"],
           ["Ping para múltiplos servidores", "\"8.8.8.8\",\"1.1.1.1\",\"208.67.222.222\" | ForEach-Object { $r=Test-Connection $_ -Count 1 -EA 0; Write-Host \"$_ -> $($r.ResponseTime)ms\" }"],
+          ["Ver Categoria da Rede (Pública/Privada)", "Get-NetConnectionProfile | Select-Object Name,InterfaceAlias,NetworkCategory | Format-Table -AutoSize"],
+          ["Configuração Completa do Adaptador (IP/DNS/Gateway)", "Get-NetIPConfiguration | Select-Object InterfaceAlias,IPv4Address,IPv6Address,DNSServer | Format-List"],
         ],
       },
       {
@@ -663,6 +665,11 @@
           ["Ver Regras de Firewall Ativas", "Get-NetFirewallRule | Where-Object Enabled -eq True | Select-Object DisplayName,Direction,Action | Format-Table -AutoSize"],
           ["Checar Portas Abertas", "netstat -ano | Where-Object { $_ -match \"LISTENING\" } | Select-Object -First 20"],
           ["Listar Processos Suspeitos (sem assinatura)", "Get-Process | Where-Object { -not (Get-AuthenticodeSignature $_.Path -EA 0).IsOSBinary } | Select-Object Name,Path,Id | Format-Table -AutoSize"],
+          ["Listar Usuários e Administradores Locais", "Get-LocalUser | Select-Object Name,Enabled,LastLogon | Format-Table -AutoSize; Write-Host \"\"; Write-Host \"--- Administradores ---\" -ForegroundColor Yellow; $grp = Get-LocalGroup -EA 0 | Where-Object { [string]$_.SID -eq \"S-1-5-32-544\" } | Select-Object -First 1 -ExpandProperty Name; if ($grp) { Get-LocalGroupMember -Group $grp -EA 0 | Select-Object Name,PrincipalSource | Format-Table -AutoSize } else { Write-Host \"Grupo Administradores não encontrado.\" -ForegroundColor Red }"],
+          ["Ver Dispositivos Conhecidos na Rede (ARP)", "Get-NetNeighbor -AddressFamily IPv4 -EA 0 | Where-Object State -ne \"Unreachable\" | Select-Object IPAddress,LinkLayerAddress,State,InterfaceAlias | Sort-Object IPAddress | Format-Table -AutoSize"],
+          ["Verificar Compartilhamentos de Rede (SMB)", "Get-SmbShare -EA 0 | Select-Object Name,Path,Description | Format-Table -AutoSize"],
+          ["Calcular Hash SHA256 de um Arquivo", "Get-FileHash -Path CAMINHO_ARQUIVO -Algorithm SHA256 -EA Stop | Format-List Algorithm,Hash,Path"],
+          ["Tentativas de Login (Últimas 24h)", "$inicio=(Get-Date).AddHours(-24); Get-WinEvent -FilterHashtable @{LogName=\"Security\";Id=4624,4625;StartTime=$inicio} -MaxEvents 50 -EA 0 | Select-Object TimeCreated,Id,@{N=\"Resultado\";E={if($_.Id -eq 4624){\"Sucesso\"}else{\"Falha\"}}} | Format-Table -AutoSize"],
         ],
       },
       {
@@ -793,6 +800,7 @@
         /SetSuspendState/i,
         /shutdown\s+\/[rshl]/i,
         /git\s+(push|stash\s+pop)/i,
+        /chkdsk\s+[a-z]:[\s\S]*\/[fr]/i,
       ];
       function isDangerous(cmd) { return DANGER_PATTERNS.some((re) => re.test(cmd)); }
       function confirmBeforeExecution(code, source = "catalog") {
@@ -1038,6 +1046,7 @@
         { regex: /NOME_SERVICO/, title: "🔧 Desativar Serviço", desc: "Informe o nome do serviço:", placeholder: "ex: wuauserv, SysMain, Spooler", token: "NOME_SERVICO" },
         { regex: /NUMERO_KB/, title: "📦 Desinstalar Atualização", desc: "Informe o número do KB (sem o prefixo KB):", placeholder: "ex: 5005565", token: "NUMERO_KB" },
         { regex: /CAMINHO\.inf/, title: "🔌 Driver INF", desc: "Informe o caminho completo do arquivo .inf:", placeholder: "ex: C:\\Drivers\\driver.inf", token: "CAMINHO.inf" },
+        { regex: /CAMINHO_ARQUIVO/, title: "🔐 Calcular Hash SHA256", desc: "Informe o caminho completo do arquivo:", placeholder: "ex: C:\\Users\\Jean\\Downloads\\programa.exe", token: "CAMINHO_ARQUIVO" },
       ];
       let _pendingCmd = null;
       let _pendingToken = null;
@@ -1059,6 +1068,12 @@
         } else if (_pendingToken === "CAMINHO.inf") {
           if (!/^[a-zA-Z]:\\[^"'\r\n;&|`$<>]+\.inf$/i.test(val)) {
             alert("Informe um caminho local seguro terminado em .inf.");
+            return;
+          }
+          replacement = `"${val}"`;
+        } else if (_pendingToken === "CAMINHO_ARQUIVO") {
+          if (!/^[a-zA-Z]:\\[^"'\r\n;&|`$<>]+$/i.test(val)) {
+            alert("Informe um caminho local seguro (ex: C:\\pasta\\arquivo.exe).");
             return;
           }
           replacement = `"${val}"`;
