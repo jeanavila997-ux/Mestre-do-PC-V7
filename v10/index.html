@@ -1306,8 +1306,10 @@
       async function pollJobUntilDone(jobId, onOutput) {
         while (true) {
           const r = await fetch(API + "/run-status?id=" + encodeURIComponent(jobId), { signal: AbortSignal.timeout(5000) });
-          const d = await r.json();
-          if (!r.ok) throw new Error(d.output || "Falha ao consultar o status do comando.");
+          let d = null;
+          try { d = await r.json(); } catch {}
+          if (!r.ok) throw new Error((d && d.output) || ("Falha ao consultar o status do comando (HTTP " + r.status + ")."));
+          if (!d || typeof d !== "object") throw new Error("Resposta inválida ao consultar o status do comando.");
           if (d.output && onOutput) onOutput(d.output);
           if (d.state === "completed" || d.state === "failed" || d.state === "timed_out" || d.state === "timeout") {
             if (d.state !== "completed") throw new Error(d.output || "Falha na execução");
