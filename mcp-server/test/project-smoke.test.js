@@ -24,6 +24,8 @@ test("V10 usa caminho de projeto do ambiente e cabeçalho privilegiado", async (
   const html = await readFile(join(root, "v10", "index.html"), "utf8");
   assert.match(html, /\$env:MESTRE_PROJETO_PATH/);
   assert.match(html, /"X-Mestre-Client": "v10-web"/);
+  assert.doesNotMatch(html, /\/run-status\?jobId=/);
+  assert.match(html, /\/run-status\?id=/);
   assert.doesNotMatch(html, /C:\\\\MestreDoPC_V7/);
   assert.doesNotMatch(html, /C:\\\\Users\\\\Jeanc\\\\MestreDoPC_V7/);
 });

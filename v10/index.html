@@ -1305,10 +1305,10 @@
 
       async function pollJobUntilDone(jobId, onOutput) {
         while (true) {
-          const r = await fetch(API + "/run-status?jobId=" + encodeURIComponent(jobId), { signal: AbortSignal.timeout(5000) });
+          const r = await fetch(API + "/run-status?id=" + encodeURIComponent(jobId), { signal: AbortSignal.timeout(5000) });
           const d = await r.json();
           if (d.output && onOutput) onOutput(d.output);
-          if (d.state === "completed" || d.state === "failed" || d.state === "timeout") {
+          if (d.state === "completed" || d.state === "failed" || d.state === "timed_out" || d.state === "timeout") {
             if (d.state !== "completed") throw new Error(d.output || "Falha na execução");
             return d.output;
           }
