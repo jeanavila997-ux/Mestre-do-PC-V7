@@ -26,6 +26,7 @@ test("V10 usa caminho de projeto do ambiente e cabeçalho privilegiado", async (
   assert.match(html, /"X-Mestre-Client": "v10-web"/);
   assert.doesNotMatch(html, /\/run-status\?jobId=/);
   assert.match(html, /\/run-status\?id=/);
+  assert.match(html, /if \(!r\.ok\) throw new Error\(d\.output \|\| "Falha ao consultar o status do comando\."\);/);
   assert.doesNotMatch(html, /C:\\\\MestreDoPC_V7/);
   assert.doesNotMatch(html, /C:\\\\Users\\\\Jeanc\\\\MestreDoPC_V7/);
 });
